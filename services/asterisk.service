@@ -1,0 +1,20 @@
+[Unit]
+Description=Raw Asteriks Pbx Docker Compose Stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/mnt/ssd/freepbx/asterisk-dongle
+ExecStart=docker compose up -d
+ExecStop=docker compose down
+
+StandardOutput=append:/var/log/asteriks-compose.log
+StandardError=append:/var/log/asteriks-compose.err
+
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

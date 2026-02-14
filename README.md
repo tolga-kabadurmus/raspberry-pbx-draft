@@ -205,13 +205,39 @@ Ensure the following settings:
 # COMMENT: change SSH port to a non-standard port
 Port <CUSTOM_PORT>
 
-# COMMENT: password authentication must be enabled
-PasswordAuthentication yes
-
 # COMMENT: disable root SSH login
+PermitRootLogin prohibit-password
+
+# COMMENT: password authentication must be disabled and pubkey auth must be enabled
+PasswordAuthentication no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+ChallengeResponseAuthentication no
+
+# not to permit root access
+PermitRootLogin no
 PermitRootLogin prohibit-password
 ```
 
+Run ssh-keygen in order to create a key pair, then 
+```bash
+ssh-keygen
+
+# after creating the key pair run below and locate the public key file
+ls -la cat $HOME/.ssh/id_ed25519.pub >> /home/tolga/.ssh/authorized_keys
+cat $HOME/.ssh/{{path-to-public-key}}.pub >> $HOME/.ssh/authorized_keys
+chmod 700 $HOME/.ssh
+chmod 600 $HOME/.ssh/authorized_keys
+chown -R ${whoami}:${whoami}$HOME/.ssh
+```
+
+Copy private key for ssh-clients such as putty
+```bash
+# copy below output to your client as text file 
+# run PuttyGen and create private key 
+# use that private key in putty connection settings
+cat $HOME/.ssh/id_ed25519
+```
 Restart the SSH service:
 
 ```bash
@@ -543,4 +569,395 @@ systemctl start freepbx
 reboot
 docker ps
 docker logs {{freepbx-app-container-id}} | more
+```
+
+## A whatchdog (draft)
+
+For a production grade configuration you need a watchdog which keeps checking all the system items are working properly. If any part is failed your sip-phone connection will be broken. The broken phone connection might be a nightmare. In order to overcome lets design a system with the following requirements;
+1- A bash script that works as watchdog to keep checking all the system parts 
+  - check for internet connection is up
+  - check for docker.service is up
+  - check for asterisk.service is up
+  - check for asterisk docker container is up
+  - check for some internal cases inside the asterisk container
+
+Write a service file located in: 
+Important: paths in below script need to changed for your configuration.
+```bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+#############################################
+#               GLOBAL CONFIG
+#############################################
+
+MAX_RETRIES=3
+RETRY_SLEEP_SECONDS=10
+
+# docker exec timeout (seconds)
+DOCKER_EXEC_TIMEOUT=15
+
+INTERNET_CHECK_URL="https://1.1.1.1"
+
+DEFAULT_ASTERISK_SERVICE="asterisk.service"
+DEFAULT_CONTAINER_NAME="asterisk-dongle"
+
+#############################################
+#               ARGUMENTS
+#############################################
+
+ASTERISK_SERVICE="${1:-$DEFAULT_ASTERISK_SERVICE}"
+CONTAINER_NAME="${2:-$DEFAULT_CONTAINER_NAME}"
+
+#############################################
+#          STATE + LOG CONFIG
+#############################################
+
+WATCHDOG_DIR="/mnt/ssd/freepbx/log/asterisk/watchdog"
+STATE_FILE="$WATCHDOG_DIR/state"
+ALERT_TS_FILE="$WATCHDOG_DIR/last_alert_ts"
+LOCAL_LOG_FILE="$WATCHDOG_DIR/watchdog.log"
+
+COOLDOWN_SECONDS=600
+
+mkdir -p "$WATCHDOG_DIR"
+
+[ -f "$STATE_FILE" ] || echo "OK" > "$STATE_FILE"
+[ -f "$ALERT_TS_FILE" ] || echo "0" > "$ALERT_TS_FILE"
+
+
+#############################################
+#               LOGGING
+#############################################
+
+journal_notify() {
+    local level="$1"
+    local message="$2"
+
+    local prev_state
+    prev_state=$(get_state)
+
+    local new_state="$prev_state"
+
+    if [[ "$level" == "ERROR" ]]; then
+        new_state="CRITICAL"
+    elif [[ "$level" == "OK" ]]; then
+        new_state="OK"
+    fi
+
+    # Console output
+    echo "[${level}] ${message}"
+
+    # Local persistent log
+    local_log "$level" "$message"
+
+    # State transition kontrolü
+    if [[ "$new_state" != "$prev_state" ]]; then
+
+        local_log "INFO" "STATE_CHANGE ${prev_state} -> ${new_state}"
+
+        if [[ "$new_state" == "CRITICAL" ]]; then
+            if can_alert; then
+                local_log "ALERT" "CRITICAL alert triggered"
+                set_last_alert_ts
+            else
+                local_log "INFO" "Alert suppressed due to cooldown"
+            fi
+        fi
+
+        if [[ "$new_state" == "OK" && "$prev_state" == "CRITICAL" ]]; then
+            local_log "INFO" "RECOVERED_FROM_CRITICAL"
+        fi
+
+        set_state "$new_state"
+    fi
+}
+
+
+#############################################
+#           STATE MANAGEMENT
+#############################################
+
+get_state() {
+    cat "$STATE_FILE"
+}
+
+set_state() {
+    echo "$1" > "$STATE_FILE"
+}
+
+get_last_alert_ts() {
+    cat "$ALERT_TS_FILE"
+}
+
+set_last_alert_ts() {
+    date +%s > "$ALERT_TS_FILE"
+}
+
+can_alert() {
+    local now
+    now=$(date +%s)
+    local last
+    last=$(get_last_alert_ts)
+
+    (( now - last > COOLDOWN_SECONDS ))
+}
+
+local_log() {
+    local level="$1"
+    local message="$2"
+    local ts
+    ts=$(date "+%Y-%m-%d %H:%M:%S")
+    echo "[$ts][$level] $message" >> "$LOCAL_LOG_FILE"
+}
+
+
+
+#############################################
+#           GENERIC RETRY HANDLER
+#############################################
+
+retry_check() {
+    local fail_message="$1"
+    shift
+
+    local attempt=1
+
+    while (( attempt <= MAX_RETRIES )); do
+        echo "[INFO] Attempt ${attempt}/${MAX_RETRIES}..."
+
+        if "$@"; then
+            echo "[OK] Check ${attempt}. retry success."
+            return 0
+        fi
+
+        if (( attempt < MAX_RETRIES )); then
+            echo "[WARN] Check ${attempt} fail. ${RETRY_SLEEP_SECONDS}s later give another try."
+            sleep "$RETRY_SLEEP_SECONDS"
+        fi
+
+        ((attempt++))
+    done
+
+    journal_notify "ERROR" "$fail_message"
+    return 1
+}
+
+#############################################
+#               CHECK FUNCTIONS
+#############################################
+
+check_internet() {
+    curl --silent --fail --connect-timeout 5 "$INTERNET_CHECK_URL" > /dev/null 2>&1
+}
+
+handle_internet() {
+    if retry_check "Internet connection not available." check_internet; then
+        echo "[OK] Internet connection available."
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_docker_service() {
+    systemctl is-active --quiet docker.service
+}
+
+handle_docker_service() {
+    if retry_check "docker.service service inactive." check_docker_service; then
+        echo "[OK] docker.service active."
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_asterisk_service() {
+    systemctl is-active --quiet "$ASTERISK_SERVICE"
+}
+
+handle_asterisk_service() {
+    if retry_check "$ASTERISK_SERVICE service inactive." check_asterisk_service; then
+        echo "[OK] $ASTERISK_SERVICE service active."
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_container_running() {
+    docker ps --format '{{.Names}}' | grep -w "$CONTAINER_NAME" > /dev/null 2>&1
+}
+
+handle_container() {
+    if retry_check "Container $CONTAINER_NAME not working." check_container_running; then
+        echo "[OK] Container $CONTAINER_NAME working."
+        return 0
+    else
+        return 1
+    fi
+}
+
+#############################################
+#       PLACEHOLDER FOR CONTAINER CHECKS
+#############################################
+find_container_name() {
+
+    if docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null | grep -q true; then
+        echo "$CONTAINER_NAME"
+        return 0
+    else
+        echo "[ERROR] Container $CONTAINER_NAME not running or not exist."
+        return 1
+    fi
+}
+
+exec_into_container() {
+    local container="$1"
+    local command="$2"
+
+    echo "[INFO] Exec: $command"
+
+    # exec with timeout
+    if timeout "$DOCKER_EXEC_TIMEOUT" \
+        docker exec "$container" bash -c "$command"; then
+
+        echo "[OK] Command executed."
+        return 0
+    else
+        local exit_code=$?
+
+        if [[ $exit_code -eq 124 ]]; then
+            echo "[ERROR] Command timeout (${DOCKER_EXEC_TIMEOUT}s)."
+        else
+            echo "[ERROR] Command failed. Exit code: $exit_code"
+        fi
+
+        return 1
+    fi
+}
+
+handle_container_internal_checks() {
+
+    local container
+
+    container=$(find_container_name) || return 1
+    echo "[OK] Container found => $container"
+
+    # Dongle "module show like dongle"
+    retry_check \
+        "module show like dongle failed." \
+        exec_into_container \
+        "$container" \
+        "asterisk -rx 'module show like dongle' | grep chan_dongle.so" \
+        || return 1
+		
+    #  Dongle device check
+    retry_check \
+        "dongle show devices failed." \
+        exec_into_container \
+        "$container" \
+        "asterisk -rx 'dongle show devices'" \
+        || return 1
+
+    # the other check cases (will be implemented later)
+    # exec_into_container "$container" "asterisk -rx 'sip show peers'" || return 1
+	# next;
+	# dongle show version
+	# dongle show devices
+	# dongle show device state dongle0
+	# dongle cmd dongle0 AT+CGSN
+	# dongle cmd dongle0 ATZ / ATE / AT+CGSN / AT+CPIN
+
+    echo "[OK] Container internal checks success."
+    return 0
+}
+
+#############################################
+#               MAIN FLOW
+#############################################
+concurrency_lock() {
+	LOCK_FILE="/var/run/asterisk-watchdog.lock"
+
+	exec 200>"$LOCK_FILE"
+	flock -n 200 || {
+		echo "Another instance is already running."
+		exit 1
+	}
+}
+
+main() {
+	concurrency_lock || return 1
+
+    handle_internet || return 1
+    handle_docker_service || return 1
+    handle_asterisk_service || return 1
+    handle_container || return 1
+    handle_container_internal_checks || return 1
+
+	journal_notify "OK" "All checks passed."
+	return 0
+}
+
+main
+exit $?
+
+
+```
+2- A systemd service which runs the bash script. You may call it watchdog 
+Write a service file located in: /etc/systemd/system/asterisk-watchdog.service
+Important: paths in below script need to changed for your configuration.
+```text
+[Unit]
+Description=Asterisk Watchdog Check
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/mnt/ssd/freepbx
+ExecStart=/mnt/ssd/freepbx/asterisk-watchdog.sh
+
+StandardOutput=append:/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.log
+StandardError=append:/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.err
+
+[Install]
+WantedBy=multi-user.target
+```
+
+3- A systemd timer that runs the service periodically
+Write a service file located in: /etc/systemd/system/asterisk-watchdog.timer
+```text
+[Unit]
+Description=Run Asterisk Watchdog every 60 seconds
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+AccuracySec=1
+Unit=asterisk-watchdog.service
+
+[Install]
+WantedBy=timers.target
+```
+
+4. Deploy and run the services
+  b. To deploy the services execute below codes;
+```bash
+systemctl daemon-reload
+systemctl enable asterisk-watchdog
+systemctl start asterisk-watchdog
+systemctl enable asterisk-watchdog.timer
+systemctl start asterisk-watchdog.timer
+```
+  b. To check the services is active and up execute below codes;
+```bash
+systemctl list-timers | grep watchdog
+systemctl enable asterisk-watchdog.service
+```
+  c. If any error please check with;
+```bash
+journalctl -xeu asterisk-watchdog.service
 ```

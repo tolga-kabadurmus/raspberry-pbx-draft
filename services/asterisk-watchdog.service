@@ -1,0 +1,15 @@
+[Unit]
+Description=Asterisk Watchdog Check
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/mnt/ssd/freepbx
+ExecStart=/mnt/ssd/freepbx/asterisk-watchdog.sh
+
+StandardOutput=append:/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.log
+StandardError=append:/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.err
+
+[Install]
+WantedBy=multi-user.target

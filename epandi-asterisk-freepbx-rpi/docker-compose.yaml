@@ -1,0 +1,93 @@
+version: '2'
+
+services:
+  freepbx-app:
+    restart: always
+    container_name: freepbx-app
+    image: epandi/asterisk-freepbx-arm:17.15-latest
+    ports:
+     #### If you aren't using a reverse proxy
+      # - 8089:80
+     #### If you want SSL Support and not using a reverse proxy
+     #- 443:443
+      - 5060:5060/udp
+      - 5160:5160/udp
+      - 18000-18010:18000-18010/udp
+     #### Flash Operator Panel
+      - 4445:4445
+      # Web portlarını DIŞARI AÇMA
+      # ports:  <-- YOK
+    expose:
+      - "80"
+      # - "443"
+    volumes:
+      - ./asterisk17/dongle.conf:/etc/asterisk/dongle.conf:ro
+      - ./asterisk17/certs:/certs
+      - ./asterisk17/data:/data
+      - ./asterisk17/logs:/var/log
+      - ./asterisk17/data/www:/var/www/html
+     ### Only Enable this option below if you set DB_EMBEDDED=TRUE
+      - ./asterisk17/db:/var/lib/mysql
+     ### You can drop custom files overtop of the image if you have made modifications to modules/css/whatever - Use with care
+     #- ./assets/custom:/assets/custom
+     ### Only Enable this if you use Chan_dongle/USB modem.
+      - /dev:/dev
+
+    environment:
+      - VIRTUAL_HOST=asterisk.local
+      - VIRTUAL_NETWORK=nginx-proxy
+     ### If you want to connect to the SSL Enabled Container
+     #- VIRTUAL_PORT=443
+     #- VIRTUAL_PROTO=https
+      - VIRTUAL_PORT=80
+      - LETSENCRYPT_HOST=hostname.example.com
+      - LETSENCRYPT_EMAIL=email@example.com
+
+      - ZABBIX_HOSTNAME=freepbx-app
+
+      - RTP_START=18000
+      - RTP_FINISH=18100
+
+     ## Use for External MySQL Server
+      - DB_EMBEDDED=TRUE
+
+     ### These are only necessary if DB_EMBEDDED=FALSE
+     # - DB_HOST=freepbx-db
+     # - DB_PORT=3306
+     # - DB_NAME=asterisk
+     # - DB_USER=asterisk
+     # - DB_PASS=asteriskpass
+
+     ### If you are using TLS Support for Apache to listen on 443 in the container drop them in /certs and set these:
+     #- TLS_CERT=cert.pem
+     #- TLS_KEY=key.pem
+     ### Set your desired timezone
+      - TZ='Europe/Istanbul'
+
+    ### These final lines are for Fail2ban. If you don't want, comment and also add ENABLE_FAIL2BAN=FALSE to your environment
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
+      - /dev/ttyUSB2:/dev/ttyUSB2
+      - /dev/bus/usb:/dev/bus/usb
+    networks:
+      - voip_net
+      
+  freepbx-proxy:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - 8089:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - freepbx-app
+    networks:
+      - voip_net
+
+networks:
+  voip_net:
+    driver: bridge    
