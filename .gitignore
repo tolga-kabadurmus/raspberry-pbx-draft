@@ -1,2 +1,13 @@
-log/*
-!**/log/dummy
+./log/*
+!**./log/dummy
+./blacksunsolutions-freepbx
+./epandi-asterisk-freepbx-rpi/asterisk17/certs/*
+!**./epandi-asterisk-freepbx-rpi/asterisk17/certs/dummy
+./epandi-asterisk-freepbx-rpi/asterisk17/data/*
+!**./epandi-asterisk-freepbx-rpi/asterisk17/data/dummy
+./epandi-asterisk-freepbx-rpi/asterisk17/db/*
+!**./epandi-asterisk-freepbx-rpi/asterisk17/db/dummy
+./epandi-asterisk-freepbx-rpi/asterisk17/logs/*
+!**./epandi-asterisk-freepbx-rpi/asterisk17/logs/dummy
+
+

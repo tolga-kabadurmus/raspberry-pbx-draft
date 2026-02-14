@@ -1,0 +1,143 @@
+[2026-02-14 15:16:03][OK] All checks passed.
+[2026-02-14 15:16:22][OK] All checks passed.
+[2026-02-14 15:16:31][OK] All checks passed.
+[2026-02-14 15:17:32][OK] All checks passed.
+[2026-02-14 15:18:33][OK] All checks passed.
+[2026-02-14 15:19:54][ERROR] asterisk.service service inactive.
+[2026-02-14 15:19:54][INFO] STATE_CHANGE OK -> CRITICAL
+[2026-02-14 15:19:54][ALERT] CRITICAL alert triggered
+[2026-02-14 15:20:45][OK] All checks passed.
+[2026-02-14 15:20:45][INFO] STATE_CHANGE CRITICAL -> OK
+[2026-02-14 15:20:45][INFO] RECOVERED_FROM_CRITICAL
+[2026-02-14 15:21:56][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:21:56][INFO] STATE_CHANGE OK -> CRITICAL
+[2026-02-14 15:21:56][INFO] Alert suppressed due to cooldown
+[2026-02-14 15:22:57][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:23:58][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:24:59][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:26:00][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:27:01][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:28:02][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:29:03][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:30:04][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:31:05][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:32:06][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:33:07][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:34:08][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:35:09][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:36:10][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:37:11][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:38:12][ERROR] Container asterisk-dongle not working.
+[2026-02-14 15:38:53][OK] All checks passed.
+[2026-02-14 15:38:53][INFO] STATE_CHANGE CRITICAL -> OK
+[2026-02-14 15:38:53][INFO] RECOVERED_FROM_CRITICAL
+[2026-02-14 15:39:54][OK] All checks passed.
+[2026-02-14 15:40:55][OK] All checks passed.
+[2026-02-14 15:41:56][OK] All checks passed.
+[2026-02-14 15:42:57][OK] All checks passed.
+[2026-02-14 15:43:58][OK] All checks passed.
+[2026-02-14 15:44:59][OK] All checks passed.
+[2026-02-14 15:46:00][OK] All checks passed.
+[2026-02-14 15:47:01][OK] All checks passed.
+[2026-02-14 15:48:22][ERROR] module show like dongle failed.
+[2026-02-14 15:48:22][INFO] STATE_CHANGE OK -> CRITICAL
+[2026-02-14 15:48:22][ALERT] CRITICAL alert triggered
+[2026-02-14 15:49:23][ERROR] module show like dongle failed.
+[2026-02-14 15:50:04][OK] All checks passed.
+[2026-02-14 15:50:04][INFO] STATE_CHANGE CRITICAL -> OK
+[2026-02-14 15:50:04][INFO] RECOVERED_FROM_CRITICAL
+[2026-02-14 15:51:05][OK] All checks passed.
+[2026-02-14 15:52:06][OK] All checks passed.
+[2026-02-14 15:53:06][OK] All checks passed.
+[2026-02-14 15:54:08][OK] All checks passed.
+[2026-02-14 15:54:46][OK] All checks passed.
+[2026-02-14 15:55:46][OK] All checks passed.
+[2026-02-14 15:56:46][OK] All checks passed.
+[2026-02-14 15:57:46][OK] All checks passed.
+[2026-02-14 15:58:47][OK] All checks passed.
+[2026-02-14 15:59:47][OK] All checks passed.
+[2026-02-14 16:00:48][OK] All checks passed.
+[2026-02-14 16:01:49][OK] All checks passed.
+[2026-02-14 16:02:50][OK] All checks passed.
+[2026-02-14 16:03:50][OK] All checks passed.
+[2026-02-14 16:04:50][OK] All checks passed.
+[2026-02-14 16:05:50][OK] All checks passed.
+[2026-02-14 16:06:50][OK] All checks passed.
+[2026-02-14 16:07:50][OK] All checks passed.
+[2026-02-14 16:08:50][OK] All checks passed.
+[2026-02-14 16:09:50][OK] All checks passed.
+[2026-02-14 16:10:50][OK] All checks passed.
+[2026-02-14 16:11:50][OK] All checks passed.
+[2026-02-14 16:12:50][OK] All checks passed.
+[2026-02-14 16:13:50][OK] All checks passed.
+[2026-02-14 16:14:50][OK] All checks passed.
+[2026-02-14 16:15:51][OK] All checks passed.
+[2026-02-14 16:16:52][OK] All checks passed.
+[2026-02-14 16:17:53][OK] All checks passed.
+[2026-02-14 16:18:54][OK] All checks passed.
+[2026-02-14 16:19:55][OK] All checks passed.
+[2026-02-14 16:20:56][OK] All checks passed.
+[2026-02-14 16:21:57][OK] All checks passed.
+[2026-02-14 16:22:58][OK] All checks passed.
+[2026-02-14 16:23:59][OK] All checks passed.
+[2026-02-14 16:25:00][OK] All checks passed.
+[2026-02-14 16:26:01][OK] All checks passed.
+[2026-02-14 16:27:01][OK] All checks passed.
+[2026-02-14 16:28:01][OK] All checks passed.
+[2026-02-14 16:29:02][OK] All checks passed.
+[2026-02-14 16:30:03][OK] All checks passed.
+[2026-02-14 16:31:04][OK] All checks passed.
+[2026-02-14 16:32:05][OK] All checks passed.
+[2026-02-14 16:33:06][OK] All checks passed.
+[2026-02-14 16:34:07][OK] All checks passed.
+[2026-02-14 16:35:08][OK] All checks passed.
+[2026-02-14 16:36:09][OK] All checks passed.
+[2026-02-14 16:37:10][OK] All checks passed.
+[2026-02-14 16:38:10][OK] All checks passed.
+[2026-02-14 16:39:10][OK] All checks passed.
+[2026-02-14 16:40:10][OK] All checks passed.
+[2026-02-14 16:41:10][OK] All checks passed.
+[2026-02-14 16:42:10][OK] All checks passed.
+[2026-02-14 16:43:10][OK] All checks passed.
+[2026-02-14 16:44:10][OK] All checks passed.
+[2026-02-14 16:45:11][OK] All checks passed.
+[2026-02-14 16:46:12][OK] All checks passed.
+[2026-02-14 16:47:12][OK] All checks passed.
+[2026-02-14 16:48:13][OK] All checks passed.
+[2026-02-14 16:49:14][OK] All checks passed.
+[2026-02-14 16:50:15][OK] All checks passed.
+[2026-02-14 16:51:16][OK] All checks passed.
+[2026-02-14 16:52:17][OK] All checks passed.
+[2026-02-14 16:53:18][OK] All checks passed.
+[2026-02-14 16:54:18][OK] All checks passed.
+[2026-02-14 16:55:19][OK] All checks passed.
+[2026-02-14 16:56:20][OK] All checks passed.
+[2026-02-14 16:57:20][OK] All checks passed.
+[2026-02-14 16:58:20][OK] All checks passed.
+[2026-02-14 16:59:20][OK] All checks passed.
+[2026-02-14 17:00:21][OK] All checks passed.
+[2026-02-14 17:01:22][OK] All checks passed.
+[2026-02-14 17:02:23][OK] All checks passed.
+[2026-02-14 17:03:24][OK] All checks passed.
+[2026-02-14 17:04:25][OK] All checks passed.
+[2026-02-14 17:05:26][OK] All checks passed.
+[2026-02-14 17:06:27][OK] All checks passed.
+[2026-02-14 17:07:28][OK] All checks passed.
+[2026-02-14 17:08:29][OK] All checks passed.
+[2026-02-14 17:09:30][OK] All checks passed.
+[2026-02-14 17:10:31][OK] All checks passed.
+[2026-02-14 17:11:32][OK] All checks passed.
+[2026-02-14 17:12:33][OK] All checks passed.
+[2026-02-14 17:13:34][OK] All checks passed.
+[2026-02-14 17:14:35][OK] All checks passed.
+[2026-02-14 17:15:36][OK] All checks passed.
+[2026-02-14 17:16:37][OK] All checks passed.
+[2026-02-14 17:17:38][OK] All checks passed.
+[2026-02-14 17:18:39][OK] All checks passed.
+[2026-02-14 17:19:39][OK] All checks passed.
+[2026-02-14 17:20:40][OK] All checks passed.
+[2026-02-14 17:21:41][OK] All checks passed.
+[2026-02-14 17:22:41][OK] All checks passed.
+[2026-02-14 17:23:41][OK] All checks passed.
+[2026-02-14 17:24:41][OK] All checks passed.
+[2026-02-14 17:25:42][OK] All checks passed.
