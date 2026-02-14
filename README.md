@@ -901,10 +901,6 @@ main() {
 	return 0
 }
 
-#############################################
-#               LOOP MODE
-#############################################
-
 main
 exit $?
 
@@ -932,6 +928,7 @@ WantedBy=multi-user.target
 ```
 
 3- A systemd timer that runs the service periodically
+Write a service file located in: /etc/systemd/system/asterisk-watchdog.timer
 ```text
 [Unit]
 Description=Run Asterisk Watchdog every 60 seconds
@@ -944,4 +941,23 @@ Unit=asterisk-watchdog.service
 
 [Install]
 WantedBy=timers.target
+```
+
+4. Deploy and run the services
+  b. To deploy the services execute below codes;
+```bash
+systemctl daemon-reload
+systemctl enable asterisk-watchdog
+systemctl start asterisk-watchdog
+systemctl enable asterisk-watchdog.timer
+systemctl start asterisk-watchdog.timer
+```
+  b. To check the services is active and up execute below codes;
+```bash
+systemctl list-timers | grep watchdog
+systemctl enable asterisk-watchdog.service
+```
+  c. If any error please check with;
+```bash
+journalctl -xeu asterisk-watchdog.service
 ```
