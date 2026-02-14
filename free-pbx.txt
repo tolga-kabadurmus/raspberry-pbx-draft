@@ -37,8 +37,10 @@ github:
 		Test: ssh -T git@github.com
 
 		
-		
-
+	giray:
+		https://github.com/giraygokirmak/asterisk-usbip-dongle
+		git remote set-url origin git@github.com:giraygokirmak/asterisk-usbip-dongle.git
+	
 
 
 

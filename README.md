@@ -571,17 +571,22 @@ docker ps
 docker logs {{freepbx-app-container-id}} | more
 ```
 
-## A whatchdog (draft)
+## A moduler whatchdog but still draft
 
-For a production grade configuration you need a watchdog which keeps checking all the system items are working properly. If any part is failed your sip-phone connection will be broken. The broken phone connection might be a nightmare. In order to overcome lets design a system with the following requirements;
+For a production grade configuration you need a watchdog which keeps checking all the system parts are working properly. If any part fails and you dont know it your sip-phone connection will be broken. And it might be a nightmare. 
+In order to overcome lets design a system with the following requirements;
 1- A bash script that works as watchdog to keep checking all the system parts 
-  - check for internet connection is up
-  - check for docker.service is up
-  - check for asterisk.service is up
-  - check for asterisk docker container is up
-  - check for some internal cases inside the asterisk container
+  a. Watchdog basically checks the following parts. It has been designed for easily implement to add new steps
+    - check for internet connection is up
+    - check for docker.service is up
+    - check for asterisk.service is up
+    - check for asterisk docker container is up
+    - check for some internal cases inside the asterisk container
+  b. It must log any activity to further debug purposes.
+  c. It must have a retry mechanism to check the failing system parts consequently in case of any false alarm or some temporary conditions.
+  d. If any part fails it must report the issue after a grace period. The grace period is really required because of some false alarm or some temporary conditions or system might recover itself. In a none graceperiod design you might be spammed with some devices such as sms, emai, telegram etc.
 
-Write a service file located in: 
+Create a bash script file located in host machine named as asterisk-watchdog.sh
 Important: paths in below script need to changed for your configuration.
 ```bash
 #!/usr/bin/env bash
@@ -661,6 +666,11 @@ journal_notify() {
             if can_alert; then
                 local_log "ALERT" "CRITICAL alert triggered"
                 set_last_alert_ts
+				
+				# TODO : notify the user about the failing part 
+				# SMS ? 
+				# EMAIL ?
+				# TELEGRAM ?
             else
                 local_log "INFO" "Alert suppressed due to cooldown"
             fi
@@ -907,7 +917,7 @@ exit $?
 
 ```
 2- A systemd service which runs the bash script. You may call it watchdog 
-Write a service file located in: /etc/systemd/system/asterisk-watchdog.service
+Create a service file located in host machine named as /etc/systemd/system/asterisk-watchdog.service
 Important: paths in below script need to changed for your configuration.
 ```text
 [Unit]
@@ -928,7 +938,7 @@ WantedBy=multi-user.target
 ```
 
 3- A systemd timer that runs the service periodically
-Write a service file located in: /etc/systemd/system/asterisk-watchdog.timer
+Create a service file located in host machine named as /etc/systemd/system/asterisk-watchdog.timer
 ```text
 [Unit]
 Description=Run Asterisk Watchdog every 60 seconds
@@ -961,3 +971,4 @@ systemctl enable asterisk-watchdog.service
 ```bash
 journalctl -xeu asterisk-watchdog.service
 ```
+
