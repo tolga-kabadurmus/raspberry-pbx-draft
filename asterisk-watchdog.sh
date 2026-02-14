@@ -28,14 +28,14 @@ CONTAINER_NAME="${2:-$DEFAULT_CONTAINER_NAME}"
 #          STATE + LOG CONFIG
 #############################################
 
-WHATCHDOG_DIR="/mnt/ssd/freepbx/log/asterisk/whatchdog"
-STATE_FILE="$WHATCHDOG_DIR/state"
-ALERT_TS_FILE="$WHATCHDOG_DIR/last_alert_ts"
-LOCAL_LOG_FILE="$WHATCHDOG_DIR/whatchdog.log"
+WATCHDOG_DIR="/mnt/ssd/freepbx/log/asterisk/watchdog"
+STATE_FILE="$WATCHDOG_DIR/state"
+ALERT_TS_FILE="$WATCHDOG_DIR/last_alert_ts"
+LOCAL_LOG_FILE="$WATCHDOG_DIR/watchdog.log"
 
 COOLDOWN_SECONDS=600
 
-mkdir -p "$WHATCHDOG_DIR"
+mkdir -p "$WATCHDOG_DIR"
 
 [ -f "$STATE_FILE" ] || echo "OK" > "$STATE_FILE"
 [ -f "$ALERT_TS_FILE" ] || echo "0" > "$ALERT_TS_FILE"

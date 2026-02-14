@@ -1,0 +1,689 @@
+raspberry pi 4: 
+	ssh: MtK3AwiQXAsciNUk
+	freepbx: wjLIyT1Pgi0OcsLU
+harici dns: tolga-raspberry-4.taile61af3.ts.net
+
+
+FreePBX debian install:
+	https://www.freepbx.org/downloads/
+	https://github.com/FreePBX/sng_freepbx_debian_install
+	https://github.com/playfultechnology/RasPBX
+	Version List: https://sangomakb.atlassian.net/wiki/spaces/FP/pages/653197359/FreePBX+Open+Source+-+FreePBX+Versions
+	Docker image #2: https://github.com/rardcode/astpbx/tree/main
+	imageusb: https://www.osforensics.com/tools/write-usb-images.html
+	
+	* Docker image #1: 
+		https://hub.docker.com/r/blacksunsolutions/freepbx
+		https://github.com/scorpionukr/Docker-FreePBX/tree/master
+	* ARM64 docker imajı: 
+		https://github.com/epandi/tiredofit-freepbx-arm
+		https://hub.docker.com/r/epandi/asterisk-freepbx-rpi
+			/etc/asterisk/extensions.conf => /data/www/admin/modules/core/etc/extensions.conf | /var/www/html/admin/modules/core/etc/extensions.conf
+			/tmp/pjsip.template => ?
+			/tmp/dongle.template => ?
+
+
+
+
+github:
+	https push:
+		git remote set-url origin https://github.com/tolga-kabadurmus/raspberry-pbx-draft.git => token i saklamak sıkıntılı
+			token: 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
+	ssh push:
+		git remote set-url origin git@github.com:tolga-kabadurmus/raspberry-pbx-draft.git
+		ssh-keygen -t ed25519 -C "tolga@raspberry"
+		eval "$(ssh-agent -s)" => ssh agent çalışıyor mu
+		ssh-add ~/.ssh/id_ed25519
+		Test: ssh -T git@github.com
+
+		
+		
+
+
+
+
+
+Actuallly these are called jump lists. You can go to %APPDATA%\Microsoft\Windows\Recent\AutomaticDestinations,  %APPDATA%\Microsoft\Windows\Recent\CustomDestinations,%APPDATA%\Microsoft\Windows\Recent and remove the files there. Restart explorer then with taskkill /im explorer.exe /f & explorer in command prompt.
+
+ssh kapanırsa işlem de kapansın:
+	nohup ./asterisk-watchdog.sh > whtchdog.out 2>&1 &
+
+ps -ef | grep asterisk-watchdog | grep -v grep
+veya:
+pgrep -af asterisk-watchdog
+
+process ağacı:  pstree -ap | grep watchdog
+
+işi nazikçe öldürme: pkill -f asterisk-watchdog.sh
+olmazsa sırasıyla:
+1. kill PID
+2. zorla kapatma :
+	a. kill -9 PID
+	b. pkill -9 -f asterisk-watchdog.sh
+
+
+Daha İleri Seviye (Öneriler)
+
+Bir üst seviye stabilite için ileride ekleyebiliriz:
+
+1️⃣ State Tracking (çok öneririm)
+
+DOWN → UP dönüşünde bilgi mesajı
+
+Sürekli spam engelleme
+
+2️⃣ Health score mantığı
+
+Her check 1 puan:
+
+Internet
+
+Docker
+
+Service
+
+Container
+
+Dongle
+
+Toplam skor < threshold → alarm
+
+3️⃣ Restart policy (opsiyonel)
+
+Örn:
+
+3 cycle üst üste fail → container restart
+
+5 cycle fail → docker restart
+
+
+
+######### ssh key auth #########
+ssh-keygen 
+
+sudo nano /etc/ssh/sshd_config
+
+	PubkeyAuthentication yes
+	AuthorizedKeysFile .ssh/authorized_keys
+	PasswordAuthentication no
+	ChallengeResponseAuthentication no
+	PermitRootLogin no
+	PermitRootLogin prohibit-password
+
+hem tolga hem de pi kullanıcıları için
+	cat /home/tolga/.ssh/id_ed25519.pub >> /home/tolga/.ssh/authorized_keys
+
+	chmod 700 /home/tolga/.ssh
+	chmod 600 /home/tolga/.ssh/authorized_keys
+	chown -R tolga:tolga /home/tolga/.ssh
+
+kontrol:
+	 sudo -u tolga cat -A /home/tolga/.ssh/authorized_keys
+	
+sudo sshd -t
+
+
+	
+
+######### ssh key auth #########
+
+
+
+
+https://chatgpt.com/c/69875766-a70c-8391-bda6-3a8603162112
+
+
+# fstab dosyasına otomatik mount eklemek:
+sudo su 
+echo "UUID=5cd4e1fc-c042-4929-9b8a-15995e36373e  /mnt/ssd  ext4  defaults,noatime  0  2" >> /etc/fstab
+
+# docker ın data dizinini değiştirmek
+sudo rsync -aHAX --numeric-ids /var/lib/docker/ /mnt/ssd/docker-data/
+sudo mkdir -p /etc/docker
+sudo vi /etc/docker/daemon.json
+	{
+	  "data-root": "/mnt/ssd/docker-data"
+	}
+systemctl daemon-reexec && systemctl start containerd && systemctl start docker
+
+
+# containerd root dizinini değiştirmek:
+sudo su
+systemctl stop docker && systemctl stop containerd
+ps aux | grep containerd # kontrol
+mkdir -p /mnt/docker-data/containerd
+rsync -aHAX --numeric-ids /var/lib/containerd/ /mnt/ssd/docker-data/containerd/
+containerd config default > /etc/containerd/config.toml
+
+vi /etc/containerd/config.toml
+	root = "/mnt/docker-data/containerd"
+	state = "/run/containerd"
+
+systemctl daemon-reexec && systemctl start containerd && systemctl start docker
+
+
+
+docker compose -f /mnt/ssd/freepbx/epandi-asterisk-freepbx-rpi/docker-compose.yaml up
+
+
+
+
+
+You need to use sudo chmod 777 /dev/ttyUSB* on the host machine. But, this is not persistent after reboot. To make it persistent after boot on your host machine
+
+sudo nano /etc/udev/rules.d/92-dongle.rules and add
+
+KERNEL=="ttyUSB*"
+MODE="0666"
+OWNER="asterisk"
+GROUP="uucp"
+
+############ asteriks docker-compose servisi: ############
+# no gui asterisk:
+vi /etc/systemd/system/asterisk.service
+[Unit]
+Description=Raw Asteriks Pbx Docker Compose Stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/mnt/ssd/freepbx/asterisk-dongle
+ExecStart=docker compose up -d
+ExecStop=docker compose down
+
+StandardOutput=append:/var/log/asteriks-compose.log
+StandardError=append:/var/log/asteriks-compose.err
+
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+
+# servisi çalıştırmak için 
+sudo systemctl daemon-reload && sudo systemctl enable asterisk && sudo systemctl start asterisk && docker ps
+
+
+
+############ asteriks docker-compose servisi: ############
+
+
+/mnt/ssd/freepbx/log/asterisk/watchdog
+
+ 
+############ asteriks-watchdog asteriks-watchdog servisi: ############
+SERVİSİN KENDİSİ
+vi /etc/systemd/system/asterisk-watchdog.service
+[Unit]
+Description=Asterisk Watchdog Check
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/mnt/ssd/freepbx
+ExecStart=/mnt/ssd/freepbx/asterisk-watchdog.sh
+
+StandardOutput=append:/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.log
+StandardError=append:/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.err
+
+[Install]
+WantedBy=multi-user.target
+
+
+TIMER SERVİS - 60 SN DE BİR TETİKLEYECEK
+vi /etc/systemd/system/asterisk-watchdog.timer
+[Unit]
+Description=Run Asterisk Watchdog every 60 seconds
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+AccuracySec=1
+Unit=asterisk-watchdog.service
+
+[Install]
+WantedBy=timers.target
+
+
+# servisi çalıştırmak için 
+asterisk-whatcdog.service:
+	sudo systemctl daemon-reload && sudo systemctl enable asterisk-watchdog && sudo systemctl start asterisk-watchdog
+
+asterisk-watchdog.timer
+	sudo systemctl daemon-reload && sudo systemctl enable asterisk-watchdog.timer && sudo systemctl start asterisk-watchdog.timer
+	systemctl list-timers | grep watchdog
+
+servislerin çalışma loglarının görülmesi için:
+	journalctl -xeu asterisk-watchdog.service
+
+tüm asterisk servislerinin listelenmesi: 
+	systemctl list-units --type=service --all | grep asterisk
+	
+watchdog loglarını izlemek:
+	tail -f /mnt/ssd/freepbx/log/asterisk/watchdog/watchdog.log
+############ asteriks-watchdog servisi: ############
+
+
+servis hatalarının nasıl bulunacağı: sudo systemctl status asterisk.service -l --no-pager
+
+
+######### watchdog ######### 
+1. internet bağlantısı var mı?
+	if not ok:
+		mail
+		continue
+	else
+		...
+2. docker.service ayakta mı?
+	if not ok:
+		mail
+		continue
+	else
+		...
+3. asterisk ya da freepbx ayakta mı?
+	if not ok:
+		mail
+		continue
+	else
+		...
+		
+	- konfigüratif olmalı => asterisk ya da freepbx neyi arayacak ise
+	- udp bağlantı portları açık mı?
+	- asterisk komut satırı cevap veriyor mu?
+		- module show like dongle
+	- dongle komutları geçilebilir mi?
+		# TODO: dongle ın adı ne?
+		- dongle cmd dongle0 aşağıdaki minicom komutlarını geç ve beklenen sonuçları kontrol et!
+		- dongle show version
+		- dongle show devices  => dongle0
+		- dongle show device state dongle0
+	- minicom komutları geçilebilir mi?
+		- TODO: hangi /dev/ttyUSB ???
+		minicom -D /dev/ttyUSB0
+			AT
+				BEKLENEN: OK
+			ATZ => komutu araştır
+				BEKLENEN: OK
+			ATE  => komutu araştır
+				BEKLENEN: OK
+			AT+CGSN:
+				BEKLENEN: {imei}\ok
+			AT+CSMINS? => simin takılı olup olmadığının algılanması: => E180 command not found veriyor
+				Yanıt			Anlam
+				+CSMINS: 0,1	SIM takılı
+				+CSMINS: 0,0	SIM yok
+				ERROR	SIM interface problemi
+			AT+CPIN?	
+				BEKLENEN: ??? +CPIN: SIM PIN VEYA  +CPIN: READY
+				ERROR ?
+######### watchdog ######### 
+
+
+######### astrisk/minicom/dongle #########
+minicom:
+    https://wiki-emacinc-com.translate.goog/wiki/Getting_Started_With_Minicom?_x_tr_sl=en&_x_tr_tl=tr&_x_tr_hl=tr&_x_tr_pto=tc
+
+chan_dongle:
+	kaynak kod: https://github.com/bg111/asterisk-chan-dongle
+	http://asterisk-service.com/en_US/page/chan-dongle-use
+	https://chan-dongle.blogspot.com/2018/08/chandongle-cli-commands.html
+		dongle cmd <device> <at_command>
+		dongle cmd dongle0 AT+CGSN
+			Send to the rfcomm port on the device with the specified
+		dongle reload gracefully
+			Reloads the chan_dongle configuration gracefully
+		dongle sms <device> <number> <message>
+			Send SMS to <number> with the <message> using <device>
+		https://github.com/bg111/asterisk-chan-dongle/issues/236
+			AT+CPBS="ON"
+				OK
+			AT+CPBS?
+				+CPBS: "ON",4,4
+            AT+CPBW=?
+				+CPBW: (1-4),24,(128-255),16
+			AT+CPBW=1,"8885551212",,"Voice"
+				ERROR
+	asterisk komut satırı: https://github.com/bg111/asterisk-chan-dongle
+		asterisk -rvvvv
+			module show like dongle
+			dongle show version
+
+			dongle show devices  => dongle0
+			dongle show device state dongle0
+			
+			dongle reload now
+			dongle stop now dongle0
+			dongle start dongle0
+			
+			
+			minicom -D /dev/ttyUSB0
+			AT		
+				OK
+			AT+CIMI
+				ERROR
+			AT+CREG?
+				ERROR
+			AT+CGSN  => cihaz imei
+			AT+CSMINS? => simin takılı olup olmadığının algılanması:
+				Yanıt			Anlam
+				+CSMINS: 0,1	SIM takılı
+				+CSMINS: 0,0	SIM yok
+				ERROR	SIM interface problemi
+			AT+CPIN?
+				BEKLENEN : +CPIN: SIM PIN VEYA  +CPIN: READY
+
+				
+######### astrisk/minicom/dongle #########
+
+
+
+    -- [dongle0] Trying to connect on /dev/ttyUSB0...
+    -- [dongle0] Dongle has connected, initializing...
+[Feb 12 21:42:07] ERROR[498]: at_response.c:287 log_cmd_response_error: [dongle0] Getting IMSI number failed
+    -- [dongle0] Error initializing Dongle
+    -- [dongle0] Dongle has disconnected
+
+
+raspberry pi komut satırı:
+	echo -e "AT+CGN\r" | minicom -D /dev/ttyUSB0
+
+
+Connected to Asterisk 22.8.0 currently running on tolga-raspberry-4 (pid = 1)
+    -- [dongle0] Trying to connect on /dev/ttyUSB0...
+    -- [dongle0] Dongle has connected, initializing...
+[Feb 12 16:25:00] ERROR[277]: at_response.c:287 log_cmd_response_error: [dongle0] Getting IMSI number failed
+    -- [dongle0] Error initializing Dongle
+    -- [dongle0] Dongle has disconnected
+    -- [dongle0] Trying to connect on /dev/ttyUSB0...
+    -- [dongle0] Dongle has connected, initializing...
+
+
+    -- [dongle0] Trying to connect on /dev/ttyUSB1...
+    -- [dongle0] Dongle has connected, initializing...
+[Feb 12 16:16:20] ERROR[1243]: chan_dongle.c:521 do_monitor_phone: [dongle0] timedout while waiting 'OK' in response to 'AT'
+    -- [dongle0] Error initializing Dongle
+    -- [dongle0] Dongle has disconnected
+    -- Remote UNIX connection
+    -- Remote UNIX connection disconnected
+    -- Remote UNIX connection
+    -- Remote UNIX connection disconnected
+    -- Remote UNIX connection
+    -- Remote UNIX connection disconnected
+    -- Remote UNIX connection
+    -- Remote UNIX connection disconnected
+    -- Remote UNIX connection
+    -- Remote UNIX connection disconnected
+    -- Remote UNIX connection
+    -- Remote UNIX connection disconnected
+    -- Remote UNIX connection
+    -- Remote UNIX connection disconnected
+    -- [dongle0] Trying to connect on /dev/ttyUSB1...
+
+
+
+############ freepbx docker-compose servisi: ############
+vi /etc/systemd/system/freepbx.service
+[Unit]
+Description=FreePBX Docker Compose Stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/mnt/ssd/freepbx/epandi-asterisk-freepbx-rpi
+ExecStart=docker compose up -d
+ExecStop=docker compose down
+
+StandardOutput=append:/var/log/freepbx-compose.log
+StandardError=append:/var/log/freepbx-compose.err
+
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+
+# servisi çalıştırmak için 
+systemctl daemon-reload && systemctl enable freepbx && systemctl start freepbx && docker ps
+
+
+tail -f /var/log/freepbx-compose.log => çalışmıyor
+docker ps && systemctl status freepbx
+############ freepbx docker-compose servisi: ############
+
+
+
+######### DOCKER-USER zinciri ve iptables koruması: #########
+sudo apt update
+sudo apt install iptables-persistent
+
+# 1️⃣ INPUT zincirini temizle (policy hala ACCEPT iken)
+sudo iptables -P INPUT ACCEPT
+sudo iptables -F INPUT
+
+# 2️⃣ Var olan bağlantılara izin ver (HER ZAMAN EN ÜSTE)
+sudo iptables -I INPUT 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# 3️⃣ Loopback (localhost) izin ver
+sudo iptables -I INPUT 2 -i lo -j ACCEPT
+
+# 4️⃣ Rate-limit’li ICMP (ping)
+sudo iptables -I INPUT 3 -p icmp --icmp-type echo-request -m limit --limit 1/second --limit-burst 5 -j ACCEPT
+
+# 5️⃣ SSH erişimi (3389) — sadece 192.168.68.0/22
+sudo iptables -I INPUT 4 -p tcp -s 192.168.68.0/22 --dport 3389 -j ACCEPT
+
+# 6️⃣ FreePBX Web UI — sadece internal subnet
+sudo iptables -I INPUT 5 -p tcp -s 192.168.68.0/22 --dport 8089 -j ACCEPT
+
+# 7️⃣ Varsayılan politika (EN SON)
+sudo iptables -P INPUT DROP
+
+sudo iptables -L INPUT -n -v --line-numbers
+
+# persist:
+sudo iptables-save > /etc/iptables/rules.v4
+######### DOCKER-USER zinciri ve iptables koruması: #########
+
+
+######### DOCKER-USER zinciri #########
+sudo iptables -F DOCKER-USER
+# Mevcut bağlantılara izin ver (HER ZAMAN EN ÜSTTE)
+sudo iptables -I DOCKER-USER 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+# FreePBX Web UI
+sudo iptables -I DOCKER-USER 2 -p tcp -s 192.168.68.0/22 --dport 8089 -j ACCEPT
+# FOP
+sudo iptables -I DOCKER-USER 3 -p tcp --dport 4445 -j ACCEPT
+# SIP
+sudo iptables -I DOCKER-USER 4 -p udp --dport 5060 -j ACCEPT
+sudo iptables -I DOCKER-USER 5 -p udp --dport 5160 -j ACCEPT
+# RTP
+sudo iptables -I DOCKER-USER 6 -p udp --dport 18000:18010 -j ACCEPT
+
+## açma erişim sağlanamıyor yoksa
+## Default deny
+# sudo iptables -A DOCKER-USER -j DROP
+
+#kontrol  ssh - 3389 olmasa şaşırma yukarıda zaten tanımladım
+sudo iptables -L DOCKER-USER -n -v --line-numbers
+# presist
+sudo iptables-save > /etc/iptables/rules.v4
+######### DOCKER-USER zinciri #########
+
+
+
+# drop paketlerine log açılması:
+# sınırsız
+iptables -I INPUT 6 -j LOG --log-prefix "IPTABLES DROP: " --log-level 4
+# son 5 dk
+iptables -I INPUT 6 -m limit --limit 5/min -j LOG --log-prefix "IPTABLES DROP: "
+
+dmesg | tail
+# veya
+journalctl -k | grep -i "IPTABLES DROP: "
+Üretimde sürekli LOG açmak log flood yaratır
+Bu yüzden şu an açmanı önermiyorum
+
+# kuralı satır numarası ile silmek: 
+iptables -D INPUT 2
+
+
+
+sudo reboot
+
+
+
+
+gh-md-to-html /mnt/ssd/freepbx/epandi-asterisk-freepbx-rpi/raspberry_pi_freepbx_setup.md -p /mnt/ssd/freepbx/epandi-asterisk-freepbx-rpi/raspberry_pi_freepbx_setup.pdf
+
+import gh_md_to_html
+
+your_markdown_as_a_string: str = "/mnt/ssd/freepbx/epandi-asterisk-freepbx-rpi/raspberry_pi_freepbx_setup.md"
+
+https://www.markdowntopdf.com/
+
+
+with open()
+
+
+
+pigpioid fan kurulumu:
+https://github.com/joan2937/pigpio/issues/632
+DOLLAR="\$"
+
+cat << EOF > config_pigpiod_service.sh
+#! /bin/bash
+PIGPIOD_SERVICE="/etc/systemd/system/pigpiod.service"
+
+if [[ ! -f "${DOLLAR}{PIGPIOD_SERVICE}" ]] ; then
+
+  # The configuration of pigpiod appears to be different on 32 bit and 64 bit systems
+  # pigpiod must be run with -t0 on a 64 bit system, and -t1 on a 32 bit system.
+  # The 32 bit behaviour contradicts what is documented in the pigpiod web documentation ;-(
+  ARCH=${DOLLAR}(uname -m)
+
+  if [[ "${DOLLAR}{ARCH}" == "aarch64" ]] ; then
+    T_COMMAND="-t0"
+  elif [[ "${DOLLAR}{ARCH}" == "armv7l" ]] ; then
+    T_COMMAND="-t1"
+  elif [[ "${DOLLAR}{ARCH}" == "armv6l" ]] ; then
+    T_COMMAND="-t1"
+  else
+    echo "uname -m returns '${DOLLAR}{ARCH}' which is an unexpected value. Time to debug..."
+    echo
+    echo "I have not seen armv8 on my Pi3, but I believe this might happen if running"
+    echo "64 bits. I am not sure whether pigpiod requires -t0 or -t1 in this case."
+    echo "You'll need to experiment."
+    echo
+    echo "I believe armv6 is a possibility on a Pi2 or earlier?"
+    echo "I guess use same settings as for armv6l?"
+    exit 1
+  fi
+
+  # We are going to overwrite the systemd configuration file for pigpiod
+  # because we are going to change the launch options
+  cat << END > "${DOLLAR}{PIGPIOD_SERVICE}"
+[Unit]
+Description=Daemon required to control GPIO pins via pigpio
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/pigpiod -l -s10 ${DOLLAR}{T_COMMAND} -x0xFFFFFFF
+Restart=always
+ExecStop=/bin/systemctl kill pigpiod
+
+[Install]
+WantedBy=multi-user.target
+END
+else
+  echo "${DOLLAR}{PIGPIOD_SERVICE} already exists. I refuse to change it."
+fi
+EOF
+
+chmod 755 config_pigpiod_service.sh
+
+https://abyz.me.uk/rpi/pigpio/download.html
+https://wiki.geekworm.com/X-C1_Software?_gl=1*1oa0iux*_gcl_au*Mjc1MDgxNTk3LjE3Njk0MjEwMTk.*_ga*MTg5MTgzNDc5MC4xNzY5NDIxMDIw*_ga_WCBGYZY3V4*czE3NzA2MTIxMzQkbzEwJGcxJHQxNzcwNjEzMDMyJGo1JGwwJGgw
+cd ~
+sudo apt-get update
+sudo apt-get -y upgrade
+sudo apt-get -y install i2c-tools python3-smbus python3-rpi.gpio
+sudo apt-get install -y git
+sudo apt-get install -y pigpio python3-pigpio
+git clone https://github.com/geekworm-com/x-c1.git
+cd x-c1
+sudo chmod +x *.sh
+sudo bash install.sh
+echo "alias xoff='sudo /usr/local/bin/x-c1-softsd.sh'" >> ~/.bashrc
+sudo reboot
+
+https://github.com/joan2937/pigpio/issues/632
+
+/etc/rc.local notfound:
+	https://stackoverflow.com/questions/51434915/etc-rc-local-is-missing-from-my-headless-ubuntu-18-04
+
+/usr/local/bin/x-c1-softsd.sh: line 6: /sys/class/gpio/gpio27/direction: No such file or directory
+	https://wiki.geekworm.com/XScript
+		sudo nano /boot/firmware/config.txt => add dtoverlay=pwm-2chan
+		sudo nano /boot/firmware/config.txt
+		sudo nano /boot/config.txt
+			[all]
+			dtoverlay=spi1-3cs,cs2_pin=-1
+			dtoverlay=pwm-2chan,pin=18,func=2
+			
+		sudo reboot
+		sudo apt install -y gpiod bc
+		git clone -b trixie https://github.com/geekworm-com/xscript.git
+		cd xscript
+		chmod +x *.sh
+		sudo ./install-fan-service.sh
+		sudo ./install-pwr-service.sh
+		sudo cp -f ./xSoft.sh                /usr/local/bin/
+		echo "alias xoff='sudo /usr/local/bin/xSoft.sh 0 27'" >>   ~/.bashrc
+		source ~/.bashrc
+
+
+
+tüm servis listesi: 
+systemctl list-units --type=service --all | grep fan
+systemctl --full --type service --all | grep fan
+systemctl --failed  
+
+
+
+
+######### gerek yok #########
+Please enable the hardware pwm by adding 'dtoverlay=pwm-2chan' to /boot/config.txt and reboot
+/usr/local/bin/x-c1-fan.sh: line 160: /sys/class/pwm/pwmchip0/unexport: No such file or directory
+	https://forums.raspberrypi.com/viewtopic.php?t=381936
+		sudo nano /boot/firmware/config.txt
+		sudo nano /boot/config.txt
+			[all]
+			dtoverlay=spi1-3cs,cs2_pin=-1
+			dtoverlay=pwm-2chan,pin=18,func=2
+######### gerek yok #########
+
+
+Authentication is required to start 'ssh.service'.
+Multiple identities can be used for authentication:
+
+
+
+
+######### tailscale kurulumu #########
+curl -fsSL https://tailscale.com/install.sh | sh
+
+sudo tailscale up
+
+
+# eğer exit node olarak kullanılacaksa
+tailscale up --advertise-exit-node
+######### tailscale kurulumu #########
+
+
+
+							  

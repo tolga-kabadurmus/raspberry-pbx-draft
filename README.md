@@ -205,13 +205,39 @@ Ensure the following settings:
 # COMMENT: change SSH port to a non-standard port
 Port <CUSTOM_PORT>
 
-# COMMENT: password authentication must be enabled
-PasswordAuthentication yes
-
 # COMMENT: disable root SSH login
+PermitRootLogin prohibit-password
+
+# COMMENT: password authentication must be disabled and pubkey auth must be enabled
+PasswordAuthentication no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+ChallengeResponseAuthentication no
+
+# not to permit root access
+PermitRootLogin no
 PermitRootLogin prohibit-password
 ```
 
+Run ssh-keygen in order to create a key pair, then 
+```bash
+ssh-keygen
+
+# after creating the key pair run below and locate the public key file
+ls -la cat $HOME/.ssh/id_ed25519.pub >> /home/tolga/.ssh/authorized_keys
+cat $HOME/.ssh/{{path-to-public-key}}.pub >> $HOME/.ssh/authorized_keys
+chmod 700 $HOME/.ssh
+chmod 600 $HOME/.ssh/authorized_keys
+chown -R ${whoami}:${whoami}$HOME/.ssh
+```
+
+Copy private key for ssh-clients such as putty
+```bash
+# copy below output to your client as text file 
+# run PuttyGen and create private key 
+# use that private key in putty connection settings
+cat $HOME/.ssh/id_ed25519
+```
 Restart the SSH service:
 
 ```bash
@@ -544,3 +570,10 @@ reboot
 docker ps
 docker logs {{freepbx-app-container-id}} | more
 ```
+
+## A draft whatchdog
+
+For a production grade configuration you need a watchdog which keeps checking all the system items are working properly. If any part is failed your sip-phone connection will be broken. The broken phone connection might be a nightmare. In order to overcome lets design a system with the following requirements;
+- A bash script that works as watchdog to keep checking all the system parts 
+- A systemd service which runs the bash script 
+- A systemd timer that runs the service periodically
