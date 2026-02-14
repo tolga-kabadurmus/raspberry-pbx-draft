@@ -1,0 +1,4 @@
+KERNEL=="ttyUSB*"
+MODE="0666"
+OWNER="asterisk"
+GROUP="uucp"
