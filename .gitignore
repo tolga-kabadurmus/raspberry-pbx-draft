@@ -1,5 +1,5 @@
-./log/*
-!**./log/dummy
+./log/asterisk/whatchdog/*
+!**./log/asterisk/whatchdog/dummy
 ./blacksunsolutions-freepbx
 ./epandi-asterisk-freepbx-rpi/asterisk17/certs/*
 !**./epandi-asterisk-freepbx-rpi/asterisk17/certs/dummy
