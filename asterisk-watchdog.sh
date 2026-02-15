@@ -34,6 +34,7 @@ ALERT_TS_FILE="$WATCHDOG_DIR/last_alert_ts"
 LOCAL_LOG_FILE="$WATCHDOG_DIR/watchdog.log"
 
 COOLDOWN_SECONDS=600
+ALERT_INTERVAL_SEC=600   # 10 dakika
 
 mkdir -p "$WATCHDOG_DIR"
 
@@ -44,6 +45,22 @@ mkdir -p "$WATCHDOG_DIR"
 #############################################
 #               LOGGING
 #############################################
+
+notify_user() {
+    local msg="$1"
+
+    # local log
+    local_log "INFO" "Try to notify user. Message => \"$msg\")"
+
+    # örnek telegram
+    # curl -s -X POST ...
+
+    # örnek email
+    # mail -s "Watchdog Alert" user@example.com <<< "$msg"
+
+    return 0  # başarılı ise 0
+}
+
 
 journal_notify() {
     local level="$1"
@@ -60,30 +77,58 @@ journal_notify() {
         new_state="OK"
     fi
 
-    # Console output
     echo "[${level}] ${message}"
-
-    # Local persistent log
     local_log "$level" "$message"
 
-    # State transition kontrolü
-    if [[ "$new_state" != "$prev_state" ]]; then
+    local now_ts
+    now_ts=$(date +%s)
 
-        local_log "INFO" "STATE_CHANGE ${prev_state} -> ${new_state}"
+    # ------------------------------
+    # CRITICAL HANDLING (Re-alert)
+    # ------------------------------
+    if [[ "$new_state" == "CRITICAL" ]]; then
 
-        if [[ "$new_state" == "CRITICAL" ]]; then
-            if can_alert; then
-                local_log "ALERT" "CRITICAL alert triggered"
+        local last_alert_ts
+        last_alert_ts=$(get_last_alert_ts)
+
+        local elapsed=0
+        if [[ -n "$last_alert_ts" ]]; then
+            elapsed=$((now_ts - last_alert_ts))
+        fi
+
+        if [[ "$prev_state" != "CRITICAL" || "$elapsed" -ge "$ALERT_INTERVAL_SEC" ]]; then
+
+            local_log "ALERT" "CRITICAL alert triggered (elapsed=${elapsed}s)"
+
+            if notify_user "CRITICAL: ${message} (elapsed=${elapsed}s"; then
+                local_log "INFO" "User notified about alert"
                 set_last_alert_ts
             else
-                local_log "INFO" "Alert suppressed due to cooldown"
+                local_log "ERROR" "Notify failed (CRITICAL)"
             fi
         fi
+    fi
 
-        if [[ "$new_state" == "OK" && "$prev_state" == "CRITICAL" ]]; then
-            local_log "INFO" "RECOVERED_FROM_CRITICAL"
+    # ------------------------------
+    # RECOVERY HANDLING (One-shot)
+    # ------------------------------
+    if [[ "$new_state" == "OK" && "$prev_state" == "CRITICAL" ]]; then
+
+        local_log "INFO" "RECOVERED_FROM_CRITICAL"
+
+        # Recovery message only once, no retry
+        if notify_user "OK: System recovered - ${message}"; then
+            local_log "INFO" "Recovery notification sent"
+        else
+            local_log "ERROR" "Recovery notification failed (no retry)"
         fi
+    fi
 
+    # ------------------------------
+    # STATE UPDATE
+    # ------------------------------
+    if [[ "$new_state" != "$prev_state" ]]; then
+        local_log "INFO" "STATE_CHANGE ${prev_state} -> ${new_state}"
         set_state "$new_state"
     fi
 }

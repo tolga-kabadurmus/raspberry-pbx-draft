@@ -28,6 +28,7 @@ RUN apt-get install -y \
 	minicom \
 	tmux \
 	usb-modeswitch usb-modeswitch-data usbutils \
+	net-tools usbip \
     && rm -rf /var/lib/apt/lists/*
 
 # Get Asterisk version and download matching source
@@ -83,6 +84,8 @@ RUN ORIGINAL_SO=$(find /usr -name "chan_dongle.so" 2>/dev/null | head -n 1) && \
         chmod 755 /usr/lib/asterisk/modules/chan_dongle.so && \
         echo "Installed chan_dongle.so to /usr/lib/asterisk/modules/"; \
     fi
+
+# RUN apt install -y diger paketler buraya
 
 # Clean up
 RUN apt-get purge -y \

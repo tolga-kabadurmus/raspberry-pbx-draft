@@ -4,6 +4,9 @@ raspberry pi 4:
 harici dns: tolga-raspberry-4.taile61af3.ts.net
 
 
+Public IP adresimin bulunması:  wget -qO- https://ipecho.net/plain ; echo
+
+
 FreePBX debian install:
 	https://www.freepbx.org/downloads/
 	https://github.com/FreePBX/sng_freepbx_debian_install
