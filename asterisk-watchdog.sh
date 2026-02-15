@@ -305,30 +305,39 @@ handle_container_internal_checks() {
     container=$(find_container_name) || return 1
     echo "[OK] Container found => $container"
 
-    # 1️⃣ Dongle "module show like dongle"
-    retry_check \
-        "module show like dongle failed." \
-        exec_into_container \
-        "$container" \
-        "asterisk -rx 'module show like dongle' | grep chan_dongle.so" \
-        || return 1
-		
-    # 1️⃣ Dongle device check
-    retry_check \
-        "dongle show devices failed." \
-        exec_into_container \
-        "$container" \
-        "asterisk -rx 'dongle show devices'" \
-        || return 1
+    # Define arrays for error messages and commands
+    check_msgs=(
+        "module show like dongle failed."
+        "dongle cmd dnongle0 AT command failed"
+        "dongle show devices failed. no responding device at dongle0."
+    )
+    check_cmds=(
+        # 1. Dongle "module show like dongle"
+        "asterisk -rx 'module show like dongle' | grep chan_dongle.so"
+        # 2. Dongle hello commands
+        "asterisk -rx 'dongle cmd dongle0 AT' | grep 'Device'" # TODO: replace with Device connected
+        # 3. Dongle device check
+        "asterisk -rx 'dongle show devices' | grep 'dongle0' | grep 'conne'" # TODO: replace with connected
 
-    # 2️⃣ the other check cases (will be implemented later)
-    # exec_into_container "$container" "asterisk -rx 'sip show peers'" || return 1
-	# next;
-	# dongle show version
-	# dongle show devices
-	# dongle show device state dongle0
-	# dongle cmd dongle0 AT+CGSN
-	# dongle cmd dongle0 ATZ / ATE / AT+CGSN / AT+CPIN
+        # next internal tests mşight be;
+        # "asterisk -rx 'sip show peers'"
+        # dongle show version
+        # dongle show devices
+        # dongle show device state dongle0
+        # dongle cmd dongle0 AT
+        # dongle cmd dongle0 AT+CGSN => imei
+        # dongle cmd dongle0 ATZ / ATE / AT+CPIN    
+    )
+
+    # Loop through the checks
+    for i in "${!check_msgs[@]}"; do
+        retry_check \
+            "${check_msgs[$i]}" \
+            exec_into_container \
+            "$container" \
+            "${check_cmds[$i]}" \
+            || return 1
+    done
 
     echo "[OK] Container internal checks success."
     return 0
