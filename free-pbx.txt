@@ -1,11 +1,5 @@
-raspberry pi 4: 
-	ssh: MtK3AwiQXAsciNUk
-	freepbx: wjLIyT1Pgi0OcsLU
-harici dns: tolga-raspberry-4.taile61af3.ts.net
-
-
 Public IP adresimin bulunması:  wget -qO- https://ipecho.net/plain ; echo
-
+Open ports: netstat -lntu | grep 5060
 
 FreePBX debian install:
 	https://www.freepbx.org/downloads/
@@ -480,10 +474,14 @@ sudo iptables -I INPUT 2 -i lo -j ACCEPT
 sudo iptables -I INPUT 3 -p icmp --icmp-type echo-request -m limit --limit 1/second --limit-burst 5 -j ACCEPT
 
 # 5️⃣ SSH erişimi (3389) — sadece 192.168.68.0/22
-sudo iptables -I INPUT 4 -p tcp -s 192.168.68.0/22 --dport 3389 -j ACCEPT
+sudo iptables -I INPUT 5 -p tcp -s 192.168.68.0/22 --dport 3389 -j ACCEPT
 
 # 6️⃣ FreePBX Web UI — sadece internal subnet
-sudo iptables -I INPUT 5 -p tcp -s 192.168.68.0/22 --dport 8089 -j ACCEPT
+sudo iptables -I INPUT 6 -p tcp -s 192.168.68.0/22 --dport 8089 -j ACCEPT
+
+# SIP
+sudo iptables -I INPUT 7 -p udp -s 192.168.68.0/22 --dport 5060 -j ACCEPT
+sudo iptables -I INPUT 8 -p udp -s 192.168.68.0/22 --dport 5160 -j ACCEPT
 
 # 7️⃣ Varsayılan politika (EN SON)
 sudo iptables -P INPUT DROP
