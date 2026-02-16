@@ -11,3 +11,4 @@ epandi-asterisk-freepbx-rpi/asterisk17/logs/*
 !**epandi-asterisk-freepbx-rpi/asterisk17/logs/dummy
 
 
+asterisk-dongle/.env
