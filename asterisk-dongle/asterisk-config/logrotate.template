@@ -4,7 +4,7 @@
 /var/log/asterisk/rtp
 /var/log/asterisk/dialplan
 /var/log/asterisk/security
-/var/log/asterisk/sms*.log {
+l {
     daily
     missingok
     rotate 14

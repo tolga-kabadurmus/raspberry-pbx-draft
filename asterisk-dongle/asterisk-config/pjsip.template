@@ -12,10 +12,16 @@ default_realm=local.gsm.gateway
 type=transport
 protocol=udp
 bind=0.0.0.0:5060
-;local_net=$LOCAL_NET
-; Only set these if you need external access:
-;external_media_address=$PUBLIC_IP
-;external_signaling_address=$PUBLIC_IP
+local_net=192.168.68.0/22
+local_net=100.64.0.0/10        ; Tailscale subnet'i (genel CGNAT aralığı)
+external_media_address=         ; boş bırak, Tailscale NAT gerektirmez
+external_signaling_address=     ; boş bırak
+
+; Tailscale için ayrı bir transport (opsiyonel ama önerilir)
+[transport-udp-tailscale]
+type=transport
+protocol=udp
+bind=100.76.139.5:5060  ; raspberry pi tailscale ip adresi
 
 [transport-tcp]
 type=transport
@@ -65,6 +71,7 @@ username=100
 
 [100]
 type=aor
-max_contacts=1
-qualify_frequency=30
-remove_existing=yes
+max_contacts=2
+qualify_frequency=60
+qualify_timeout=10.0      ; 3'ten 10'a çıkar
+remove_existing=no

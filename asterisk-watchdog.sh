@@ -6,6 +6,10 @@ set -euo pipefail
 #               GLOBAL CONFIG
 #############################################
 
+# RSSI eşik değerleri (dongle show devices çıktısındaki RSSI kolonuna göre)
+RSSI_WARN_THRESHOLD=10     # Bu değerin altı = uyarı
+RSSI_CRITICAL_THRESHOLD=5  # Bu değerin altı = kritik
+
 MAX_RETRIES=3
 RETRY_SLEEP_SECONDS=10
 
@@ -154,6 +158,7 @@ set_last_alert_ts() {
     date +%s > "$ALERT_TS_FILE"
 }
 
+: '
 can_alert() {
     local now
     now=$(date +%s)
@@ -162,6 +167,7 @@ can_alert() {
 
     (( now - last > COOLDOWN_SECONDS ))
 }
+'
 
 local_log() {
     local level="$1"
@@ -196,7 +202,7 @@ retry_check() {
             sleep "$RETRY_SLEEP_SECONDS"
         fi
 
-        ((attempt++))
+        attempt=$((attempt + 1))
     done
 
     journal_notify "ERROR" "$fail_message"
@@ -208,7 +214,8 @@ retry_check() {
 #############################################
 
 check_internet() {
-    curl --silent --fail --connect-timeout 5 "$INTERNET_CHECK_URL" > /dev/null 2>&1
+    curl --silent --fail --connect-timeout 5 "https://1.1.1.1" > /dev/null 2>&1 || \
+    curl --silent --fail --connect-timeout 5 "https://8.8.8.8" > /dev/null 2>&1
 }
 
 handle_internet() {
@@ -298,6 +305,52 @@ exec_into_container() {
     fi
 }
 
+check_dongle_signal() {
+    local rssi
+    rssi=$(docker exec "$CONTAINER_NAME" \
+        asterisk -rx 'dongle show devices' \
+        | grep dongle0 \
+        | awk '{print $4}')
+
+    # Değer gelmedi mi?
+    if [[ -z "$rssi" ]]; then
+        echo "[ERROR] RSSI değeri okunamadı."
+        return 1
+    fi
+
+    # Geçersiz değerler (0 = bilinmiyor, 99 = sinyal yok)
+    if [[ "$rssi" -eq 0 || "$rssi" -eq 99 ]]; then
+        echo "[ERROR] Geçersiz RSSI: $rssi (dongle şebekeye kayıtlı olmayabilir)"
+        return 1
+    fi
+
+    # Kritik eşik
+    if [[ "$rssi" -lt "$RSSI_CRITICAL_THRESHOLD" ]]; then
+        echo "[ERROR] RSSI kritik seviyede düşük: $rssi (eşik: $RSSI_CRITICAL_THRESHOLD)"
+        return 1
+    fi
+
+    # Uyarı eşiği
+    if [[ "$rssi" -lt "$RSSI_WARN_THRESHOLD" ]]; then
+        echo "[WARN] RSSI düşük: $rssi (eşik: $RSSI_WARN_THRESHOLD)"
+        # Uyarı ver ama return 0 — watchdog'u durdurma
+        journal_notify "WARN" "Sinyal zayıf: RSSI=$rssi"
+        return 0
+    fi
+
+    echo "[OK] RSSI: $rssi"
+    return 0
+}
+
+handle_dongle_signal() {
+    if retry_check "Dongle sinyal gücü kritik seviyede." check_dongle_signal; then
+        echo "[OK] Dongle sinyal kontrolü geçti."
+        return 0
+    else
+        return 1
+    fi
+}
+
 handle_container_internal_checks() {
 
     local container
@@ -308,25 +361,22 @@ handle_container_internal_checks() {
     # Define arrays for error messages and commands
     check_msgs=(
         "module show like dongle failed."
-        # "dongle cmd dnongle0 AT command failed"
-        # "dongle show devices failed. no responding device at dongle0."
+        "Dongle cihazı bağlı değil veya çalışmıyor."
+        "GSM şebekesine kayıtlı değil."
+        "Sinyal gücü yok."
+        "Telefonun Asterisk'e bağlı değil"
     )
     check_cmds=(
         # 1. Dongle "module show like dongle"
         "asterisk -rx 'module show like dongle' | grep chan_dongle.so"
-        # 2. Dongle hello commands
-        # "asterisk -rx 'dongle cmd dongle0 AT' | grep 'Device'" # TODO: replace with Device connected
-        # 3. Dongle device check
-        # "asterisk -rx 'dongle show devices' | grep 'dongle0' | grep 'conne'" # TODO: replace with connected
-
-        # next internal tests mşight be;
-        # "asterisk -rx 'sip show peers'"
-        # dongle show version
-        # dongle show devices
-        # dongle show device state dongle0
-        # dongle cmd dongle0 AT
-        # dongle cmd dongle0 AT+CGSN => imei
-        # dongle cmd dongle0 ATZ / ATE / AT+CPIN    
+        # 2. Dongle bağlı ve hazır mı?
+        "asterisk -rx 'dongle show devices' | grep dongle0 | grep -E 'Free|Busy'"
+        # 3. gsm şebekesine kayıtlı mı?
+        "asterisk -rx 'dongle show devices' | grep dongle0 | awk '{print \$7}' | grep -v '^$'"
+        # 5. Sinyal gücü var mı?
+        "asterisk -rx 'dongle show devices' | grep dongle0 | awk '{print \$4}' | grep -vE '^0$|^99$'"
+        # 6. 100 kullanıcısı sisteme bağlı mı
+        "asterisk -rx 'pjsip show contacts' | grep 100 | grep Avail | wc -l | grep -v '^0$'"
     )
 
     # Loop through the checks
@@ -359,11 +409,16 @@ concurrency_lock() {
 main() {
 	concurrency_lock || return 1
 
+    # Script başında ekle
+    find "$WATCHDOG_DIR" -name "watchdog.log" -size +10M -exec truncate -s 0 {} \;
+    # Ya da logrotate config dosyası yaz
+
     handle_internet || return 1
     handle_docker_service || return 1
     handle_asterisk_service || return 1
     handle_container || return 1
     handle_container_internal_checks || return 1
+    handle_dongle_signal || return 1 
 
 	journal_notify "OK" "All checks passed."
 	return 0
