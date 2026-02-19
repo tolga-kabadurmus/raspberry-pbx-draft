@@ -28,7 +28,6 @@ services:
       - /sys:/sys
       - /lib/modules:/lib/modules:ro
       - ../log/asterisk/server:/var/log/asterisk
-      # - /var/log/asterisk:/var/log/asterisk
       - ./usbip.sh:/usr/bin/usbip.sh
       - /dev/ttyUSB0:/dev/ttyUSB0
       - /dev/ttyUSB1:/dev/ttyUSB1

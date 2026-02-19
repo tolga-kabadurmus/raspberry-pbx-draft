@@ -1,5 +1,7 @@
 log/asterisk/watchdog/*
 !**log/asterisk/watchdog/dummy
+log/asterisk/server/*
+!**log/asterisk/server/dummy
 blacksunsolutions-freepbx
 epandi-asterisk-freepbx-rpi/asterisk17/certs/*
 !**epandi-asterisk-freepbx-rpi/asterisk17/certs/dummy
@@ -15,3 +17,4 @@ asterisk-dongle/.gitignore
 
 #asterisk-dongle/.env
 debug/*
+
