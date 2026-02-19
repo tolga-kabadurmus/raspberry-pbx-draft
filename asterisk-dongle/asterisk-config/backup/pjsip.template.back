@@ -12,10 +12,10 @@ default_realm=local.gsm.gateway
 type=transport
 protocol=udp
 bind=0.0.0.0:5060
-;local_net=$LOCAL_NET
+local_net=$LOCAL_NET
 ; Only set these if you need external access:
-;external_media_address=$PUBLIC_IP
-;external_signaling_address=$PUBLIC_IP
+external_media_address=$PUBLIC_IP
+external_signaling_address=$PUBLIC_IP
 
 [transport-tcp]
 type=transport
@@ -34,28 +34,19 @@ allow=ulaw
 allow=alaw
 allow=gsm
 direct_media=no
-rtp_symmetric=yes
-rewrite_contact=yes
+ice_support=yes
 force_rport=yes
-ice_support=no
-timers=no
-100rel=no
+rewrite_contact=yes
+rtp_symmetric=yes
 trust_id_inbound=yes
-ice_support=no
-use_avpf=no
-media_encryption=no
-rtcp_mux=no
 
+; Extension 100
 [100](endpoint-basic)
 auth=100
 aors=100
 context=from-internal
 message_context=from-internal-message
 callerid=Extension 100 <100>
-ice_support=no
-use_avpf=no
-media_encryption=no
-rtcp_mux=no
 
 [100]
 type=auth

@@ -1,0 +1,39 @@
+services:
+  asterisk-dongle:
+    container_name: asterisk-dongle
+    user: asterisk
+    build:
+      context: .
+      dockerfile: Dockerfile
+    network_mode: "host"
+    env_file: .env
+    environment:
+      - IMEI1=${IMEI1}
+      - IMEI2=${IMEI2}
+      - LOCAL_NET=${LOCAL_NET}
+      - PUBLIC_IP=${PUBLIC_IP}
+      - EXTEN_PASS=${EXTEN_PASS}
+    volumes:
+      - ./92-dongle.rules:/etc/udev/rules.d/92-dongle.rules
+      - ./asterisk-config/dongle.template:/tmp/dongle.template:ro
+      - ./asterisk-config/pjsip.template:/tmp/pjsip.template:ro
+      - ./asterisk-config/extensions.template:/etc/asterisk/extensions.conf:ro      
+      - /dev:/dev
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
+      - /dev/ttyUSB2:/dev/ttyUSB2
+      - /var/lock/ttyUSB0.lock:/var/lock/ttyUSB0.lock
+      - /var/lock/ttyUSB1.lock:/var/lock/ttyUSB1.lock
+      - /var/lock/ttyUSB2.lock:/var/lock/ttyUSB2.lock
+    command: >
+      sh -c "envsubst < /tmp/dongle.template > /etc/asterisk/dongle.conf && 
+             envsubst < /tmp/pjsip.template > /etc/asterisk/pjsip.conf &&
+             exec /usr/sbin/asterisk -vvvdddf -T -W -U asterisk -p"
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
+      - /dev/ttyUSB2:/dev/ttyUSB2
+      - /dev/bus/usb:/dev/bus/usb
+

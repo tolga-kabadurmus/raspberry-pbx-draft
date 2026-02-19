@@ -1,0 +1,14 @@
+/var/log/asterisk/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 640 asterisk asterisk
+    sharedscripts
+    postrotate
+        /usr/sbin/asterisk -rx 'logger reload' > /dev/null 2>&1
+    endscript
+}
+

@@ -1,28 +1,49 @@
 services:
-  asterisk-dongle:
+  asterisk:
     container_name: asterisk-dongle
-    user: asterisk
     build:
       context: .
       dockerfile: Dockerfile
     network_mode: "host"
     env_file: .env
+    ports:
+      - 5060:5060/udp
+      - 5160:5160/udp
+      - 10000-10100:10000-10100/udp
     environment:
       - IMEI1=${IMEI1}
       - IMEI2=${IMEI2}
       - LOCAL_NET=${LOCAL_NET}
       - PUBLIC_IP=${PUBLIC_IP}
       - EXTEN_PASS=${EXTEN_PASS}
+      - USB_IP=${USB_IP}
     volumes:
-      - ./92-dongle.rules:/etc/udev/rules.d/92-dongle.rules
-      - ./asterisk-config/dongle.template:/tmp/dongle.template:ro
-      - ./asterisk-config/pjsip.template:/tmp/pjsip.template:ro
-      - ./asterisk-config/extensions.template:/etc/asterisk/extensions.conf:ro      
+      - ./asterisk-config/dongle.template:/tmp/dongle.template
+      - ./asterisk-config/pjsip.template:/tmp/pjsip.template
+      - ./asterisk-config/rtp.template:/tmp/rtp.template
+      - ./asterisk-config/extensions.template:/etc/asterisk/extensions.conf
+      - ./asterisk-config/logrotate.template:/etc/logrotate.d/asterisk
+      - ./asterisk-config/logger.template:/tmp/logger.template
       - /dev:/dev
+      - /sys:/sys
+      - /lib/modules:/lib/modules:ro
+      - /var/log/asterisk:/var/log/asterisk
+      - ./usbip.sh:/usr/bin/usbip.sh
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
+      - /dev/ttyUSB2:/dev/ttyUSB2
     command: >
       sh -c "envsubst < /tmp/dongle.template > /etc/asterisk/dongle.conf && 
              envsubst < /tmp/pjsip.template > /etc/asterisk/pjsip.conf &&
-             exec /usr/sbin/asterisk -vvvdddf -T -W -U asterisk -p"
+             envsubst < /tmp/rtp.template > /etc/asterisk/rtp.conf &&
+             # envsubst < /tmp/extensions.template > /etc/asterisk/extensions.conf &&
+             envsubst < /tmp/logger.template > /etc/asterisk/logger.conf &&
+             sh /usr/bin/usbip.sh &
+             mkdir -p /var/run/fail2ban &&
+             chown -R asterisk:asterisk /var/log/asterisk &&
+             chmod 750 /var/log/asterisk && 
+             /usr/bin/fail2ban-server -b -x start &&
+             exec /usr/sbin/asterisk -vvvdddf -T -W -U asterisk -p" 
     restart: unless-stopped
     privileged: true
     devices:
@@ -30,4 +51,3 @@ services:
       - /dev/ttyUSB1:/dev/ttyUSB1
       - /dev/ttyUSB2:/dev/ttyUSB2
       - /dev/bus/usb:/dev/bus/usb
-

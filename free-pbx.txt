@@ -23,6 +23,7 @@ FreePBX debian install:
 
 
 github:
+github:
 	https push:
 		git remote set-url origin https://github.com/tolga-kabadurmus/raspberry-pbx-draft.git => token i saklamak sıkıntılı
 
@@ -309,7 +310,7 @@ servis hatalarının nasıl bulunacağı: sudo systemctl status asterisk.service
 			ATE  => komutu araştır
 				BEKLENEN: OK
 			AT+CGSN:
-				BEKLENEN: {imei}\ok
+				BEKLENEN: {imei}\ok => 356185032985888
 			AT+CSMINS? => simin takılı olup olmadığının algılanması: => E180 command not found veriyor
 				Yanıt			Anlam
 				+CSMINS: 0,1	SIM takılı
@@ -482,6 +483,8 @@ sudo iptables -I INPUT 6 -p tcp -s 192.168.68.0/22 --dport 8089 -j ACCEPT
 # SIP
 sudo iptables -I INPUT 7 -p udp -s 192.168.68.0/22 --dport 5060 -j ACCEPT
 sudo iptables -I INPUT 8 -p udp -s 192.168.68.0/22 --dport 5160 -j ACCEPT
+sudo iptables -I INPUT 9 -p udp -s 100.108.102.76 --dport 5060 -j ACCEPT
+sudo iptables -I INPUT 10 -p udp -s 100.108.102.76 --dport 5160 -j ACCEPT
 
 # 7️⃣ Varsayılan politika (EN SON)
 sudo iptables -P INPUT DROP
@@ -533,6 +536,32 @@ Bu yüzden şu an açmanı önermiyorum
 
 # kuralı satır numarası ile silmek: 
 iptables -D INPUT 2
+
+
+
+Önce dump al:
+
+iptables-save > /root/iptables-backup.rules
+
+
+Geri dönmek istersen:
+
+iptables-restore < /root/iptables-backup.rules
+
+
+tüm iptables kurallarını dök: iptables -L -n -v
+
+iptables ı sıfırlamak:
+iptables -P INPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -P OUTPUT ACCEPT
+
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
 
 
 
@@ -688,5 +717,19 @@ tailscale up --advertise-exit-node
 ######### tailscale kurulumu #########
 
 
+subnet:
+ip -o -f inet addr show tailscale0 | awk '/scope global/ {print $4}' | perl -ne 's/(?<=\d.)\d{1,3}(?=\/)/0/g; print;'
 
-							  
+
+pjsip set logger on
+rtp set debug on
+
+
+pjsip reload
+
+asterisk -rx "logger show channels"
+asterisk -rx "core show settings" | grep "Log"
+
+pjsip show endpoint 100
+
+sudo tail -n 100 /var/log/asterisk/full >> ../debug/filtered-full

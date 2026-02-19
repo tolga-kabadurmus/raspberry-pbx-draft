@@ -2,13 +2,11 @@ FROM andrius/asterisk:latest
 
 USER root
 
-# Fail2ban ve iptables ekleniyor
+# Install build dependencies
 RUN apt-get update && \
-    apt-get install -y \
-	usbip \
-	hwdata \
-    fail2ban \
-    iptables \
+	apt upgrade -y
+	
+RUN apt-get install -y \
     gettext-base \
     git \
     build-essential \
@@ -27,6 +25,10 @@ RUN apt-get update && \
     libjansson-dev \
     uuid-dev \
     wget \
+	minicom \
+	tmux \
+	usb-modeswitch usb-modeswitch-data usbutils \
+	net-tools usbip \
     && rm -rf /var/lib/apt/lists/*
 
 # Get Asterisk version and download matching source
@@ -55,7 +57,7 @@ RUN echo "Configuring Asterisk source and generating headers..." && \
 
 # Clone and build chan_dongle with configured Asterisk headers
 WORKDIR /tmp/build
-RUN git clone https://github.com/giraygokirmak/asterisk-chan-dongle.git && \
+RUN git clone https://github.com/wdoekes/asterisk-chan-dongle.git && \
     cd asterisk-chan-dongle && \
     ./bootstrap && \
     ASTERISK_VERSION=$(asterisk -V 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -n1) && \
@@ -83,7 +85,7 @@ RUN ORIGINAL_SO=$(find /usr -name "chan_dongle.so" 2>/dev/null | head -n 1) && \
         echo "Installed chan_dongle.so to /usr/lib/asterisk/modules/"; \
     fi
 
-RUN apt-get update && apt-get install -y vim nano
+# RUN apt install -y diger paketler buraya
 
 # Clean up
 RUN apt-get purge -y \
@@ -95,10 +97,6 @@ RUN apt-get purge -y \
     wget \
     && apt-get autoremove -y \
     && rm -rf /tmp/build /tmp/asterisk-* /usr/src/asterisk
-
-COPY jail.local /etc/fail2ban/jail.local
-COPY asterisk-filter.conf /etc/fail2ban/filter.d/asterisk.conf	
-COPY usbip.sh /usr/bin/usbip.sh
+	
 RUN echo "security.log => security" >> /etc/asterisk/logger.conf
-
 WORKDIR /

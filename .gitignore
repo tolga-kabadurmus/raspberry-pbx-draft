@@ -10,5 +10,7 @@ epandi-asterisk-freepbx-rpi/asterisk17/db/*
 epandi-asterisk-freepbx-rpi/asterisk17/logs/*
 !**epandi-asterisk-freepbx-rpi/asterisk17/logs/dummy
 
+asterisk-dongle/.git
+asterisk-dongle/.gitignore
 
 #asterisk-dongle/.env
