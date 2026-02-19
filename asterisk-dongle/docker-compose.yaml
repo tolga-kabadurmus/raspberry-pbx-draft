@@ -27,7 +27,8 @@ services:
       - /dev:/dev
       - /sys:/sys
       - /lib/modules:/lib/modules:ro
-      - /var/log/asterisk:/var/log/asterisk
+      - ../log/asterisk/server:/var/log/asterisk
+      # - /var/log/asterisk:/var/log/asterisk
       - ./usbip.sh:/usr/bin/usbip.sh
       - /dev/ttyUSB0:/dev/ttyUSB0
       - /dev/ttyUSB1:/dev/ttyUSB1
@@ -40,8 +41,24 @@ services:
              envsubst < /tmp/logger.template > /etc/asterisk/logger.conf &&
              sh /usr/bin/usbip.sh &
              mkdir -p /var/run/fail2ban &&
-             chown -R asterisk:asterisk /var/log/asterisk &&
-             chmod 750 /var/log/asterisk && 
+             touch /var/log/asterisk/security.log && 
+             chown asterisk:asterisk /var/log/asterisk/security.log &&
+             chmod 660 /var/log/asterisk/security.log &&
+
+            # chown -R asterisk:asterisk /var/log/asterisk && chmod -R 660 /var/log/asterisk &&
+
+            #  touch /var/log/asterisk/sms-delivery.log && 
+            #  chown asterisk:asterisk /var/log/asterisk/sms-delivery.log &&
+            #  chmod 660 /var/log/asterisk/sms-delivery.log &&
+            #  touch /var/log/asterisk/sms.log && 
+            #  chown asterisk:asterisk /var/log/asterisk/sms.log &&
+            #  chmod 660 /var/log/asterisk/sms.log &&
+            #  touch /var/log/asterisk/sms-sent.log && 
+            #  chown asterisk:asterisk /var/log/asterisk/sms-sent.log &&
+            #  chmod 660 /var/log/asterisk/sms-sent.log &&
+
+             #  chown -R asterisk:asterisk /var/log/asterisk &&
+             #  chmod 750 /var/log/asterisk && 
              /usr/bin/fail2ban-server -b -x start &&
              exec /usr/sbin/asterisk -vvvdddf -T -W -U asterisk -p" 
     restart: unless-stopped

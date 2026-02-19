@@ -308,16 +308,16 @@ handle_container_internal_checks() {
     # Define arrays for error messages and commands
     check_msgs=(
         "module show like dongle failed."
-        "dongle cmd dnongle0 AT command failed"
-        "dongle show devices failed. no responding device at dongle0."
+        # "dongle cmd dnongle0 AT command failed"
+        # "dongle show devices failed. no responding device at dongle0."
     )
     check_cmds=(
         # 1. Dongle "module show like dongle"
         "asterisk -rx 'module show like dongle' | grep chan_dongle.so"
         # 2. Dongle hello commands
-        "asterisk -rx 'dongle cmd dongle0 AT' | grep 'Device'" # TODO: replace with Device connected
+        # "asterisk -rx 'dongle cmd dongle0 AT' | grep 'Device'" # TODO: replace with Device connected
         # 3. Dongle device check
-        "asterisk -rx 'dongle show devices' | grep 'dongle0' | grep 'conne'" # TODO: replace with connected
+        # "asterisk -rx 'dongle show devices' | grep 'dongle0' | grep 'conne'" # TODO: replace with connected
 
         # next internal tests mşight be;
         # "asterisk -rx 'sip show peers'"

@@ -1,4 +1,10 @@
-/var/log/asterisk/*.log {
+/var/log/asterisk/full
+/var/log/asterisk/errors
+/var/log/asterisk/pjsip
+/var/log/asterisk/rtp
+/var/log/asterisk/dialplan
+/var/log/asterisk/security
+/var/log/asterisk/sms*.log {
     daily
     missingok
     rotate 14
@@ -11,4 +17,3 @@
         /usr/sbin/asterisk -rx 'logger reload' > /dev/null 2>&1
     endscript
 }
-
