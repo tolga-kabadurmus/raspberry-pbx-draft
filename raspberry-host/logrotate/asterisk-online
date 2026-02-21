@@ -1,0 +1,15 @@
+# vi /etc/logrotate.d/asterisk-online
+/mnt/ssd/freepbx/log/asterisk/server/online-full.log {
+    su root root
+    daily
+    missingok
+    rotate 30
+    compress
+    dateext
+    dateformat -%Y%m%d
+    notifempty
+    create 644 root root
+    postrotate
+        systemctl restart asterisk-log.service
+    endscript
+}

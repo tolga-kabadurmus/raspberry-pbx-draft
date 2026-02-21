@@ -1,3 +1,4 @@
+#vi /etc/systemd/system/asterisk.service
 [Unit]
 Description=Raw Asteriks Pbx Docker Compose Stack
 Requires=docker.service
@@ -13,6 +14,8 @@ ExecStop=docker compose down
 
 StandardOutput=append:/var/log/asteriks-compose.log
 StandardError=append:/var/log/asteriks-compose.err
+
+LogsDirectory=asterisk
 
 TimeoutStartSec=0
 

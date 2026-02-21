@@ -1,3 +1,4 @@
+#vi /etc/systemd/system/asterisk-watchdog.timer
 [Unit]
 Description=Run Asterisk Watchdog every 60 seconds
 

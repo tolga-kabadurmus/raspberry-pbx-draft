@@ -178,6 +178,18 @@ MODE="0666"
 OWNER="asterisk"
 GROUP="uucp"
 
+
+############ raspberry host da çalıştırılacak ############
+
+host log ve docker log entegrasyonu:
+	dizin:
+		1. Watchdog: /mnt/ssd/freepbx/log/asterisk/watchdog
+		2. Server: /mnt/ssd/freepbx/log/asterisk/server
+	server loglarında gerekli izinler
+		chown -R 1000:999 /mnt/ssd/freepbx/log/asterisk/server/
+		chmod -R 770 /mnt/ssd/freepbx/log/asterisk/server/
+
+
 ############ asteriks docker-compose servisi: ############
 # no gui asterisk:
 vi /etc/systemd/system/asterisk.service
@@ -201,16 +213,55 @@ TimeoutStartSec=0
 
 [Install]
 WantedBy=multi-user.target
-
-# servisi çalıştırmak için 
-sudo systemctl daemon-reload && sudo systemctl enable asterisk && sudo systemctl start asterisk && docker ps
-
-
-
 ############ asteriks docker-compose servisi: ############
+# servisi çalıştırmak için 
+systemctl daemon-reload && systemctl enable asterisk.service && systemctl start asterisk.service && docker ps
 
 
-/mnt/ssd/freepbx/log/asterisk/watchdog
+############ asteriks docker log service: ############
+vi /etc/systemd/system/asterisk-log.service
+
+[Unit]
+Description=Asterisk Docker Log Follower
+Requires=asterisk.service
+After=asterisk.service
+
+[Service]
+ExecStart=/bin/bash -c 'docker logs -f asterisk-dongle >> /var/log/asterisk/online-full.log 2>&1'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+############ asteriks docker log service: ############
+# servisi çalıştırmak için 
+systemctl daemon-reload && systemctl enable asterisk-log.service && systemctl start asterisk-log.service
+
+############ asterisk-log rotate ############
+vi /etc/logrotate.d/asterisk-online
+
+/mnt/ssd/freepbx/log/asterisk/server/online-full.log {
+    su root root
+    daily
+    missingok
+    rotate 30
+    compress
+    dateext
+    dateformat -%Y%m%d
+    notifempty
+    create 644 root root
+    postrotate
+        systemctl restart asterisk-log.service
+    endscript
+}
+############ asterisk-log rotate ############
+# Manuel rotate testi
+logrotate -d /etc/logrotate.d/asterisk-online   # dry-run
+logrotate -f /etc/logrotate.d/asterisk-online   # zorla çalıştır
+
+# Sonucu kontrol et
+ls -lah /mnt/ssd/freepbx/log/asterisk/server/
+systemctl status asterisk-log.service
 
  
 ############ asteriks-watchdog asteriks-watchdog servisi: ############
@@ -231,8 +282,10 @@ StandardError=append:/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.err
 
 [Install]
 WantedBy=multi-user.target
+############ asteriks-watchdog servisi: ############
 
 
+############ asteriks-watchdog.timer: ############
 TIMER SERVİS - 60 SN DE BİR TETİKLEYECEK
 vi /etc/systemd/system/asterisk-watchdog.timer
 [Unit]
@@ -246,6 +299,32 @@ Unit=asterisk-watchdog.service
 
 [Install]
 WantedBy=timers.target
+############ asteriks-watchdog.timer: ############
+
+############ asteriks-watchdog logrotate ############
+vi /etc/logrotate.d/asterisk-watchdog
+
+/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog.log
+/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.err
+/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.log
+{
+    su tolga tolga
+    daily
+    missingok
+    rotate 30
+    compress
+    dateext
+    dateformat -%Y%m%d
+    notifempty
+    create 644 tolga tolga
+    sharedscripts
+    postrotate
+        systemctl restart asterisk-watchdog.service
+    endscript
+}
+############ asteriks-watchdog logrotate ############
+logrotate -d /etc/logrotate.d/asterisk-watchdog
+logrotate -f /etc/logrotate.d/asterisk-watchdog
 
 
 # servisi çalıştırmak için 
@@ -268,6 +347,8 @@ watchdog loglarını izlemek:
 
 
 servis hatalarının nasıl bulunacağı: sudo systemctl status asterisk.service -l --no-pager
+############ raspberry host da çalıştırılacak ############
+
 
 
 ######### watchdog ######### 
@@ -483,8 +564,9 @@ sudo iptables -I INPUT 6 -p tcp -s 192.168.68.0/22 --dport 8089 -j ACCEPT
 # SIP
 sudo iptables -I INPUT 7 -p udp -s 192.168.68.0/22 --dport 5060 -j ACCEPT
 sudo iptables -I INPUT 8 -p udp -s 192.168.68.0/22 --dport 5160 -j ACCEPT
-sudo iptables -I INPUT 9 -p udp -s 100.108.102.76 --dport 5060 -j ACCEPT
-sudo iptables -I INPUT 10 -p udp -s 100.108.102.76 --dport 5160 -j ACCEPT
+sudo iptables -I INPUT 9 -p udp -s 192.168.68.0/22 --dport 10000:10100 -j ACCEPT
+sudo iptables -I INPUT 10 -p udp -s 100.108.102.76 --dport 5060 -j ACCEPT
+sudo iptables -I INPUT 11 -p udp -s 100.108.102.76 --dport 5160 -j ACCEPT
 
 # 7️⃣ Varsayılan politika (EN SON)
 sudo iptables -P INPUT DROP
@@ -721,15 +803,26 @@ subnet:
 ip -o -f inet addr show tailscale0 | awk '/scope global/ {print $4}' | perl -ne 's/(?<=\d.)\d{1,3}(?=\/)/0/g; print;'
 
 
+# Debug modları aç
 pjsip set logger on
 rtp set debug on
+core set verbose 5
+core set debug 5
 
 
 pjsip reload
 
-asterisk -rx "logger show channels"
-asterisk -rx "core show settings" | grep "Log"
+log settings:
+	asterisk -rx "logger show channels"
+	asterisk -rx "core show settings" | grep "Log"
 
 pjsip show endpoint 100
 
 sudo tail -n 100 /var/log/asterisk/full >> ../debug/filtered-full
+
+
+docker logs your_container_name 2> file.log
+echo `docker inspect asterisk-dongle | jq -r .[].LogPath`
+	/mnt/ssd/docker-data/containers/4c9b717bed16166d13042ece634fc235acdad4ab824b22133a43e046dcb20bfb/4c9b717bed16166d13042ece634fc235acdad4ab824b22133a43e046dcb20bfb-json.log	
+
+ tail -f `docker inspect asterisk-dongle | jq -r .[].LogPath`	

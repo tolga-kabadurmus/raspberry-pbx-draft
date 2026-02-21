@@ -1,0 +1,13 @@
+#vi /etc/systemd/system/asterisk-log.service
+[Unit]
+Description=Asterisk Docker Log Follower
+Requires=asterisk.service
+After=asterisk.service
+
+[Service]
+ExecStart=/bin/bash -c 'docker logs -f asterisk-dongle >> /mnt/ssd/freepbx/log/asterisk/server/online-full.log 2>&1'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

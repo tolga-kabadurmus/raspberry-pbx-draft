@@ -7,4 +7,4 @@ full => notice,warning,error,security,verbose(5),debug
 errors => error,warning,security
 pjsip => debug
 security => security
-console => notice,warning,error,verbose(3)
+console => notice,warning,error,verbose(5),debug   ; ← verbose artırıldı

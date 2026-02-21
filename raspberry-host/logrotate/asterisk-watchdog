@@ -1,0 +1,19 @@
+#vi /etc/logrotate.d/asterisk-watchdog
+/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog.log
+/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.err
+/mnt/ssd/freepbx/log/asterisk/watchdog/watchdog-service.log
+{
+    su tolga tolga
+    daily
+    missingok
+    rotate 30
+    compress
+    dateext
+    dateformat -%Y%m%d
+    notifempty
+    create 644 tolga tolga
+    sharedscripts
+    postrotate
+        systemctl restart asterisk-watchdog.service
+    endscript
+}

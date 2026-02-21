@@ -4,12 +4,13 @@
 /var/log/asterisk/rtp
 /var/log/asterisk/dialplan
 /var/log/asterisk/security
-l {
+{
     daily
     missingok
-    rotate 14
+    rotate 30
     compress
-    delaycompress
+    dateext
+    dateformat -%Y%m%d
     notifempty
     create 640 asterisk asterisk
     sharedscripts

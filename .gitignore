@@ -18,3 +18,4 @@ asterisk-dongle/.gitignore
 #asterisk-dongle/.env
 debug/*
 
+asterisk-dongle/log/asterisk/server/docker.log
