@@ -21,6 +21,19 @@ DEFAULT_CONTAINER_NAME="asterisk-dongle"
 RSSI_WARN_THRESHOLD=10
 RSSI_CRITICAL_THRESHOLD=5
 
+WATCHDOG_DIR="/mnt/ssd/freepbx/log/asterisk/watchdog"
+STATE_FILE="$WATCHDOG_DIR/state"
+ALERT_TS_FILE="$WATCHDOG_DIR/last_alert_ts"
+LOCAL_LOG_FILE="$WATCHDOG_DIR/watchdog.log"
+
+ALERT_INTERVAL_SEC=600   # 10 dakika
+
+mkdir -p "$WATCHDOG_DIR"
+
+# Heartbeat: Sistem sağlıklıysa kaç saniyede bir Telegram mesajı atılsın
+HEARTBEAT_INTERVAL_SEC=3600  # 1 saat
+HEARTBEAT_TS_FILE="$WATCHDOG_DIR/last_heartbeat_ts"
+
 #############################################
 #               ARGUMENTS
 #############################################
@@ -32,16 +45,9 @@ CONTAINER_NAME="${2:-$DEFAULT_CONTAINER_NAME}"
 #          STATE + LOG CONFIG
 #############################################
 
-WATCHDOG_DIR="/mnt/ssd/freepbx/log/asterisk/watchdog"
-STATE_FILE="$WATCHDOG_DIR/state"
-ALERT_TS_FILE="$WATCHDOG_DIR/last_alert_ts"
-
-ALERT_INTERVAL_SEC=600   # 10 dakika
-
-mkdir -p "$WATCHDOG_DIR"
-
 [ -f "$STATE_FILE" ]    || echo "OK" > "$STATE_FILE"
 [ -f "$ALERT_TS_FILE" ] || echo "0"  > "$ALERT_TS_FILE"
+[ -f "$HEARTBEAT_TS_FILE" ]  || echo "0"  > "$HEARTBEAT_TS_FILE"
 
 # 30 günden eski .bak dosyalarını sil
 find "$WATCHDOG_DIR" -name "watchdog.log.*.bak" -mtime +30 -delete
@@ -66,6 +72,40 @@ notify_user() {
     # mail -s "Watchdog Alert" user@example.com <<< "$msg"
 
     return 0
+}
+
+#############################################
+#               HEARTBEAT
+#############################################
+
+get_last_heartbeat_ts() {
+    cat "$HEARTBEAT_TS_FILE"
+}
+
+set_last_heartbeat_ts() {
+    date +%s > "$HEARTBEAT_TS_FILE"
+}
+
+send_heartbeat_if_due() {
+    local now_ts
+    now_ts=$(date +%s)
+
+    local last_hb_ts
+    last_hb_ts=$(get_last_heartbeat_ts)
+
+    local elapsed=$(( now_ts - last_hb_ts ))
+
+    if (( elapsed >= HEARTBEAT_INTERVAL_SEC )); then
+        local hb_msg="❤️ Heartbeat: Tüm sistemler sağlıklı. ($(date '+%Y-%m-%d %H:%M:%S'))"
+        local_log "INFO" "Heartbeat gönderiliyor (elapsed=${elapsed}s)"
+
+        if notify_user "$hb_msg"; then
+            local_log "INFO" "Heartbeat gönderildi."
+            set_last_heartbeat_ts
+        else
+            local_log "ERROR" "Heartbeat gönderilemedi."
+        fi
+    fi
 }
 
 #############################################
@@ -131,6 +171,13 @@ journal_notify() {
         else
             local_log "ERROR" "Recovery notification failed (no retry)"
         fi
+    fi
+
+    # ------------------------------
+    # HEARTBEAT (yalnızca OK durumunda)
+    # ------------------------------
+    if [[ "$new_state" == "OK" ]]; then
+        send_heartbeat_if_due
     fi
 
     # ------------------------------

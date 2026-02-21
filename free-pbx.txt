@@ -238,7 +238,7 @@ WantedBy=multi-user.target
 systemctl daemon-reload && systemctl enable asterisk-log.service && systemctl start asterisk-log.service
 
 ############ asterisk-log rotate ############
-vi /etc/logrotate.d/asterisk-online
+vi /etc/logrotate.d/asterisk-log
 
 /mnt/ssd/freepbx/log/asterisk/server/online-full.log {
     su root root
@@ -256,8 +256,8 @@ vi /etc/logrotate.d/asterisk-online
 }
 ############ asterisk-log rotate ############
 # Manuel rotate testi
-logrotate -d /etc/logrotate.d/asterisk-online   # dry-run
-logrotate -f /etc/logrotate.d/asterisk-online   # zorla çalıştır
+logrotate -d /etc/logrotate.d/asterisk-log   # dry-run
+logrotate -f /etc/logrotate.d/asterisk-log   # zorla çalıştır
 
 # Sonucu kontrol et
 ls -lah /mnt/ssd/freepbx/log/asterisk/server/
