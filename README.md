@@ -216,7 +216,16 @@ ChallengeResponseAuthentication no
 
 # not to permit root access
 PermitRootLogin no
-PermitRootLogin prohibit-password
+
+# if below line is set to yes, "PasswordAuthentication no" might be bypassed to yes. so to say set "UsePAM no"
+UsePAM no
+KbdInteractiveAuthentication no
+```
+
+But changes just in /etc/ssh/sshd_config file might not be enough. Lets check whether there is another configuration file exists in /etc/ssh/sshd_config.d directory which could bypass our settings well-defined settings.
+If any configuration file exists below path, repeat the same changes we done in /etc/ssh/sshd_config file
+```bash
+ls -la /etc/ssh/sshd_config.d/*.conf
 ```
 
 Run ssh-keygen in order to create a key pair, then 
@@ -241,7 +250,11 @@ cat $HOME/.ssh/id_ed25519
 Restart the SSH service:
 
 ```bash
-systemctl restart ssh.service
+# lets do syntax check on sshd_config file:
+sshd -t
+
+# restart sshd service
+systemctl restart sshd
 ```
 
 ---
