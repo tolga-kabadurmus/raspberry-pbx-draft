@@ -19,3 +19,6 @@ asterisk-dongle/.gitignore
 debug/*
 
 asterisk-dongle/log/asterisk/server/docker.log
+asterisk-dongle/.env
+asterisk-dongle-backup/.env
+asterisk-dongle/.env

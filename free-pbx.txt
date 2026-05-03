@@ -135,6 +135,8 @@ https://chatgpt.com/c/69875766-a70c-8391-bda6-3a8603162112
 
 # fstab dosyasına otomatik mount eklemek:
 sudo su 
+# to get uid of ssd disk:
+lsblk -f
 echo "UUID=5cd4e1fc-c042-4929-9b8a-15995e36373e  /mnt/ssd  ext4  defaults,noatime  0  2" >> /etc/fstab
 
 # docker ın data dizinini değiştirmek
@@ -826,3 +828,17 @@ echo `docker inspect asterisk-dongle | jq -r .[].LogPath`
 	/mnt/ssd/docker-data/containers/4c9b717bed16166d13042ece634fc235acdad4ab824b22133a43e046dcb20bfb/4c9b717bed16166d13042ece634fc235acdad4ab824b22133a43e046dcb20bfb-json.log	
 
  tail -f `docker inspect asterisk-dongle | jq -r .[].LogPath`	
+
+ docker container takılı kalırsa:
+sudo su - 
+systemctl stop docker.socket docker.service
+docker container rm {{container-id}}
+rm  -rf /mnt/ssd/docker-data/containers/{{container-id}}
+
+
+servisler:
+root@tolga-raspberry-4:~# ls -lah /etc/systemd/system/asterisk*
+-rw-r--r-- 1 root root 291 Feb 21 13:54 /etc/systemd/system/asterisk-log.service
+-rw-r--r-- 1 root root 491 Feb 14 14:16 /etc/systemd/system/asterisk.service
+-rw-r--r-- 1 root root 422 Feb 14 19:26 /etc/systemd/system/asterisk-watchdog.service
+-rw-r--r-- 1 root root 178 Feb 14 18:49 /etc/systemd/system/asterisk-watchdog.timer
